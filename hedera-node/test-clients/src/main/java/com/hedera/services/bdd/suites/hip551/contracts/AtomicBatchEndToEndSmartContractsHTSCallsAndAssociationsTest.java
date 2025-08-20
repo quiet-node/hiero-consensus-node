@@ -1,24 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.services.bdd.suites.hip551.contracts;
-
-import com.esaulpaugh.headlong.abi.Address;
-import com.hedera.services.bdd.junit.HapiTest;
-import com.hedera.services.bdd.junit.HapiTestLifecycle;
-import com.hedera.services.bdd.junit.support.TestLifecycle;
-import com.hedera.services.bdd.spec.SpecOperation;
-import com.hedera.services.bdd.spec.transactions.HapiTxnOp;
-import com.hedera.services.bdd.spec.transactions.token.HapiTokenCreate;
-import com.hedera.services.bdd.spec.transactions.util.HapiAtomicBatch;
-import edu.umd.cs.findbugs.annotations.NonNull;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.DynamicTest;
-
-import java.math.BigInteger;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Stream;
 
 import static com.hedera.services.bdd.spec.HapiSpec.hapiTest;
 import static com.hedera.services.bdd.spec.assertions.TransactionRecordAsserts.recordWith;
@@ -62,6 +43,25 @@ import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.TOKEN_NOT_ASSO
 import static com.hederahashgraph.api.proto.java.TokenType.FUNGIBLE_COMMON;
 import static com.hederahashgraph.api.proto.java.TokenType.NON_FUNGIBLE_UNIQUE;
 
+import com.esaulpaugh.headlong.abi.Address;
+import com.hedera.services.bdd.junit.HapiTest;
+import com.hedera.services.bdd.junit.HapiTestLifecycle;
+import com.hedera.services.bdd.junit.support.TestLifecycle;
+import com.hedera.services.bdd.spec.SpecOperation;
+import com.hedera.services.bdd.spec.transactions.HapiTxnOp;
+import com.hedera.services.bdd.spec.transactions.token.HapiTokenCreate;
+import com.hedera.services.bdd.spec.transactions.util.HapiAtomicBatch;
+import edu.umd.cs.findbugs.annotations.NonNull;
+import java.math.BigInteger;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.DynamicTest;
+
 @HapiTestLifecycle
 public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
     private static final String DEFAULT_BATCH_OPERATOR = "defaultBatchOperator";
@@ -98,13 +98,13 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
 
         // Transfer token from treasury to receivers associated account
         final var transferMintedTokenInnerTxn_First = cryptoTransfer(
-                moving(1, FT_TOKEN).between(OWNER, RECEIVER_ASSOCIATED_FIRST))
+                        moving(1, FT_TOKEN).between(OWNER, RECEIVER_ASSOCIATED_FIRST))
                 .payingWith(OWNER)
                 .signedBy(OWNER)
                 .via("transferTokenInnerTxnFirst");
 
         final var transferMintedTokenInnerTxn_Second = cryptoTransfer(
-                moving(2, FT_TOKEN).between(OWNER, RECEIVER_ASSOCIATED_SECOND))
+                        moving(2, FT_TOKEN).between(OWNER, RECEIVER_ASSOCIATED_SECOND))
                 .payingWith(OWNER)
                 .signedBy(OWNER)
                 .via("transferTokenInnerTxnSecond");
@@ -113,7 +113,8 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                 // Create accounts, keys and tokens, create contract and upload its init code
                 createAccountsAndKeys(receiverAddressFirst, receiverAddressSecond),
                 uploadInitCode(HTS_CALLS_CONTRACT),
-                contractCreate(HTS_CALLS_CONTRACT).gas(GAS_TO_OFFER)
+                contractCreate(HTS_CALLS_CONTRACT)
+                        .gas(GAS_TO_OFFER)
                         .exposingAddressTo(contractAddress::set)
                         .via("contractCreateTxn"),
 
@@ -126,13 +127,17 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
 
                 // Call the contract in atomic batch
                 sourcing(() -> atomicBatchDefaultOperator(
-                        contractCall(HTS_CALLS_CONTRACT, "mintTokenCall", fungibleAddress.get(),
-                                BigInteger.valueOf(10L), new byte[][]{})
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("callTokenMintContractInnerTxn"),
-                        transferMintedTokenInnerTxn_First,
-                        transferMintedTokenInnerTxn_Second)
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "mintTokenCall",
+                                                fungibleAddress.get(),
+                                                BigInteger.valueOf(10L),
+                                                new byte[][] {})
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("callTokenMintContractInnerTxn"),
+                                transferMintedTokenInnerTxn_First,
+                                transferMintedTokenInnerTxn_Second)
                         .payingWith(DEFAULT_BATCH_OPERATOR)
                         .via("atomicBatchTxn")
                         .hasKnownStatus(SUCCESS)),
@@ -140,8 +145,7 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                 // Assert the tokens supply is updated correctly
                 getTokenInfo(FT_TOKEN).hasTotalSupply(10L),
                 // Assert the owner account has the token
-                getAccountBalance(OWNER)
-                        .hasTokenBalance(FT_TOKEN, 7L),
+                getAccountBalance(OWNER).hasTokenBalance(FT_TOKEN, 7L),
                 // Assert the receiver associated account has the token
                 getAccountBalance(RECEIVER_ASSOCIATED_FIRST).hasTokenBalance(FT_TOKEN, 1L),
                 getAccountBalance(RECEIVER_ASSOCIATED_SECOND).hasTokenBalance(FT_TOKEN, 2L)));
@@ -157,13 +161,13 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
 
         // Transfer token from treasury to receivers associated account
         final var transferMintedTokenInnerTxn_First = cryptoTransfer(
-                movingUnique(NON_FUNGIBLE_TOKEN, 1L).between(OWNER, RECEIVER_ASSOCIATED_FIRST))
+                        movingUnique(NON_FUNGIBLE_TOKEN, 1L).between(OWNER, RECEIVER_ASSOCIATED_FIRST))
                 .payingWith(OWNER)
                 .signedBy(OWNER)
                 .via("transferTokenInnerTxnFirst");
 
         final var transferMintedTokenInnerTxn_Second = cryptoTransfer(
-                movingUnique(NON_FUNGIBLE_TOKEN, 2L).between(OWNER, RECEIVER_ASSOCIATED_SECOND))
+                        movingUnique(NON_FUNGIBLE_TOKEN, 2L).between(OWNER, RECEIVER_ASSOCIATED_SECOND))
                 .payingWith(OWNER)
                 .signedBy(OWNER)
                 .via("transferTokenInnerTxnSecond");
@@ -172,7 +176,8 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                 // Create accounts, keys and tokens, create contract and upload its init code
                 createAccountsAndKeys(receiverAddressFirst, receiverAddressSecond),
                 uploadInitCode(HTS_CALLS_CONTRACT),
-                contractCreate(HTS_CALLS_CONTRACT).gas(GAS_TO_OFFER)
+                contractCreate(HTS_CALLS_CONTRACT)
+                        .gas(GAS_TO_OFFER)
                         .exposingAddressTo(contractAddress::set)
                         .via("contractCreateTxn"),
 
@@ -185,17 +190,17 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
 
                 // Call the contract in atomic batch
                 sourcing(() -> atomicBatchDefaultOperator(
-                        contractCall(HTS_CALLS_CONTRACT, "mintTokenCall", nonFungibleAddress.get(),
-                                BigInteger.valueOf(0L),
-                                new byte[][]{
-                                        "nft1".getBytes(),
-                                        "nft2".getBytes(),
-                                        "nft3".getBytes()})
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("callNftMintContractInnerTxn"),
-                        transferMintedTokenInnerTxn_First,
-                        transferMintedTokenInnerTxn_Second)
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "mintTokenCall",
+                                                nonFungibleAddress.get(),
+                                                BigInteger.valueOf(0L),
+                                                new byte[][] {"nft1".getBytes(), "nft2".getBytes(), "nft3".getBytes()})
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("callNftMintContractInnerTxn"),
+                                transferMintedTokenInnerTxn_First,
+                                transferMintedTokenInnerTxn_Second)
                         .payingWith(DEFAULT_BATCH_OPERATOR)
                         .via("atomicBatchTxn")
                         .hasKnownStatus(SUCCESS)),
@@ -203,8 +208,7 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                 // Assert the tokens supply is updated correctly
                 getTokenInfo(NON_FUNGIBLE_TOKEN).hasTotalSupply(3L),
                 // Assert the owner account has the token
-                getAccountBalance(OWNER)
-                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 1L),
+                getAccountBalance(OWNER).hasTokenBalance(NON_FUNGIBLE_TOKEN, 1L),
                 // Assert the receiver associated account has the token
                 getAccountBalance(RECEIVER_ASSOCIATED_FIRST).hasTokenBalance(NON_FUNGIBLE_TOKEN, 1L),
                 getAccountBalance(RECEIVER_ASSOCIATED_SECOND).hasTokenBalance(NON_FUNGIBLE_TOKEN, 1L)));
@@ -220,7 +224,7 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
 
         // Transfer token from treasury to receiver associated account
         final var transferMintedTokenInnerTxn = cryptoTransfer(
-                moving(1, FT_TOKEN).between(OWNER, RECEIVER_ASSOCIATED_FIRST))
+                        moving(1, FT_TOKEN).between(OWNER, RECEIVER_ASSOCIATED_FIRST))
                 .payingWith(OWNER)
                 .signedBy(OWNER)
                 .via("transferTokenInnerTxn");
@@ -235,7 +239,8 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                 // Create accounts, keys and tokens, create contract and upload its init code
                 createAccountsAndKeys(receiverAddressFirst, receiverAddressSecond),
                 uploadInitCode(HTS_CALLS_CONTRACT),
-                contractCreate(HTS_CALLS_CONTRACT).gas(GAS_TO_OFFER)
+                contractCreate(HTS_CALLS_CONTRACT)
+                        .gas(GAS_TO_OFFER)
                         .exposingAddressTo(contractAddress::set)
                         .via("contractCreateTxn"),
 
@@ -246,24 +251,27 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
 
                 // Call the contract in atomic batch
                 sourcing(() -> atomicBatchDefaultOperator(
-                        contractCall(HTS_CALLS_CONTRACT,
-                                "mintTokenCall", fungibleAddress.get(), BigInteger.valueOf(10L),
-                                new byte[][]{})
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("callTokenMintContractInnerTxn"),
-                        associateFungibleTokenInnerTxn,
-                        transferMintedTokenInnerTxn)
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "mintTokenCall",
+                                                fungibleAddress.get(),
+                                                BigInteger.valueOf(10L),
+                                                new byte[][] {})
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("callTokenMintContractInnerTxn"),
+                                associateFungibleTokenInnerTxn,
+                                transferMintedTokenInnerTxn)
                         .payingWith(DEFAULT_BATCH_OPERATOR)
                         .via("atomicBatchTxn")
                         .hasKnownStatus(SUCCESS)),
 
-                        // Assert the token is minted
-                        getTokenInfo(FT_TOKEN).hasTotalSupply(10L),
-                        // Assert the owner account has the token
-                        getAccountBalance(OWNER).hasTokenBalance(FT_TOKEN, 9L),
-                        // Assert the receiver associated account has the token
-                        getAccountBalance(RECEIVER_ASSOCIATED_FIRST).hasTokenBalance(FT_TOKEN, 1L)));
+                // Assert the token is minted
+                getTokenInfo(FT_TOKEN).hasTotalSupply(10L),
+                // Assert the owner account has the token
+                getAccountBalance(OWNER).hasTokenBalance(FT_TOKEN, 9L),
+                // Assert the receiver associated account has the token
+                getAccountBalance(RECEIVER_ASSOCIATED_FIRST).hasTokenBalance(FT_TOKEN, 1L)));
     }
 
     @HapiTest
@@ -276,7 +284,7 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
 
         // Transfer token from treasury to receiver associated account
         final var transferMintedTokenInnerTxn = cryptoTransfer(
-                movingUnique(NON_FUNGIBLE_TOKEN, 1L).between(OWNER, RECEIVER_ASSOCIATED_FIRST))
+                        movingUnique(NON_FUNGIBLE_TOKEN, 1L).between(OWNER, RECEIVER_ASSOCIATED_FIRST))
                 .payingWith(OWNER)
                 .signedBy(OWNER)
                 .via("transferTokenInnerTxn");
@@ -291,7 +299,8 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                 // Create accounts, keys and tokens, create contract and upload its init code
                 createAccountsAndKeys(receiverAddressFirst, receiverAddressSecond),
                 uploadInitCode(HTS_CALLS_CONTRACT),
-                contractCreate(HTS_CALLS_CONTRACT).gas(GAS_TO_OFFER)
+                contractCreate(HTS_CALLS_CONTRACT)
+                        .gas(GAS_TO_OFFER)
                         .exposingAddressTo(contractAddress::set)
                         .via("contractCreateTxn"),
 
@@ -302,14 +311,17 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
 
                 // Call the contract in atomic batch
                 sourcing(() -> atomicBatchDefaultOperator(
-                        contractCall(HTS_CALLS_CONTRACT, "mintTokenCall", nonFungibleAddress.get(),
-                                BigInteger.valueOf(0L),
-                                new byte[][]{"nft1".getBytes(), "nft2".getBytes(), "nft3".getBytes()})
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("callNftMintContractInnerTxn"),
-                        associateNonFungibleTokenInnerTxn,
-                        transferMintedTokenInnerTxn)
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "mintTokenCall",
+                                                nonFungibleAddress.get(),
+                                                BigInteger.valueOf(0L),
+                                                new byte[][] {"nft1".getBytes(), "nft2".getBytes(), "nft3".getBytes()})
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("callNftMintContractInnerTxn"),
+                                associateNonFungibleTokenInnerTxn,
+                                transferMintedTokenInnerTxn)
                         .payingWith(DEFAULT_BATCH_OPERATOR)
                         .via("atomicBatchTxn")
                         .hasKnownStatus(SUCCESS)),
@@ -333,7 +345,7 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
 
         // Transfer token from treasury to receiver associated account
         final var transferMintedTokenInnerTxn = cryptoTransfer(
-                moving(1, FT_TOKEN).between(OWNER, RECEIVER_ASSOCIATED_FIRST))
+                        moving(1, FT_TOKEN).between(OWNER, RECEIVER_ASSOCIATED_FIRST))
                 .payingWith(OWNER)
                 .signedBy(OWNER)
                 .via("transferTokenInnerTxn");
@@ -348,7 +360,8 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                 // Create accounts, keys and tokens, create contract and upload its init code
                 createAccountsAndKeys(receiverAddressFirst, receiverAddressSecond),
                 uploadInitCode(HTS_CALLS_CONTRACT),
-                contractCreate(HTS_CALLS_CONTRACT).gas(GAS_TO_OFFER)
+                contractCreate(HTS_CALLS_CONTRACT)
+                        .gas(GAS_TO_OFFER)
                         .exposingAddressTo(contractAddress::set)
                         .via("contractCreateTxn"),
 
@@ -361,30 +374,44 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
 
                 // Call the contract in atomic batch
                 sourcing(() -> atomicBatchDefaultOperator(
-                        contractCall(HTS_CALLS_CONTRACT, "mintTokenCall", fungibleAddress.get(),
-                                BigInteger.valueOf(10L), new byte[][]{})
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("callTokenMintContractInnerTxn"),
-                        contractCall(HTS_CALLS_CONTRACT, "mintTokenCall", nonFungibleAddress.get(),
-                                BigInteger.valueOf(0L),
-                                new byte[][]{"nft1".getBytes(), "nft2".getBytes(), "nft3".getBytes()})
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("callNftMintContractInnerTxn"),
-                        associateFungibleTokenInnerTxn,
-                        transferMintedTokenInnerTxn,
-                        contractCall(HTS_CALLS_CONTRACT, "burnTokenCall", fungibleAddress.get(),
-                                BigInteger.valueOf(9L), new long[]{})
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("callFtBurnContractInnerTxn"),
-                        contractCall(HTS_CALLS_CONTRACT, "burnTokenCall", nonFungibleAddress.get(),
-                                BigInteger.ZERO,
-                                new long[]{1L})
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("callNftBurnContractInnerTxn"))
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "mintTokenCall",
+                                                fungibleAddress.get(),
+                                                BigInteger.valueOf(10L),
+                                                new byte[][] {})
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("callTokenMintContractInnerTxn"),
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "mintTokenCall",
+                                                nonFungibleAddress.get(),
+                                                BigInteger.valueOf(0L),
+                                                new byte[][] {"nft1".getBytes(), "nft2".getBytes(), "nft3".getBytes()})
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("callNftMintContractInnerTxn"),
+                                associateFungibleTokenInnerTxn,
+                                transferMintedTokenInnerTxn,
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "burnTokenCall",
+                                                fungibleAddress.get(),
+                                                BigInteger.valueOf(9L),
+                                                new long[] {})
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("callFtBurnContractInnerTxn"),
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "burnTokenCall",
+                                                nonFungibleAddress.get(),
+                                                BigInteger.ZERO,
+                                                new long[] {1L})
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("callNftBurnContractInnerTxn"))
                         .payingWith(DEFAULT_BATCH_OPERATOR)
                         .via("atomicBatchTxn")
                         .hasKnownStatus(SUCCESS)),
@@ -393,9 +420,7 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                 getTokenInfo(FT_TOKEN).hasTotalSupply(1L),
                 getTokenInfo(NON_FUNGIBLE_TOKEN).hasTotalSupply(2L),
                 // Assert the owner account has the token
-                getAccountBalance(OWNER)
-                        .hasTokenBalance(FT_TOKEN, 0L)
-                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 2L),
+                getAccountBalance(OWNER).hasTokenBalance(FT_TOKEN, 0L).hasTokenBalance(NON_FUNGIBLE_TOKEN, 2L),
                 // Assert the receiver associated account has the token
                 getAccountBalance(RECEIVER_ASSOCIATED_FIRST)
                         .hasTokenBalance(FT_TOKEN, 1L)
@@ -403,9 +428,10 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
     }
 
     @HapiTest
-    @DisplayName("Call contracts for FT and NFT token mint and token associate, transfer to the associated contract" +
-            " success in atomic batch")
-    final Stream<DynamicTest> callContractsForMintBurnAndAssociateAndTransferToAssociatedContractSuccessInAtomicBatch() {
+    @DisplayName("Call contracts for FT and NFT token mint and token associate, transfer to the associated contract"
+            + " success in atomic batch")
+    final Stream<DynamicTest>
+            callContractsForMintBurnAndAssociateAndTransferToAssociatedContractSuccessInAtomicBatch() {
         final AtomicReference<Address> fungibleAddress = new AtomicReference<>();
         final AtomicReference<Address> nonFungibleAddress = new AtomicReference<>();
         final AtomicReference<Address> receiverAddressFirst = new AtomicReference<>();
@@ -417,11 +443,13 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                 // Create accounts, keys and tokens, create contracts and upload their init codes
                 createAccountsAndKeys(receiverAddressFirst, receiverAddressSecond),
                 uploadInitCode(HTS_CALLS_CONTRACT),
-                contractCreate(HTS_CALLS_CONTRACT).gas(GAS_TO_OFFER)
+                contractCreate(HTS_CALLS_CONTRACT)
+                        .gas(GAS_TO_OFFER)
                         .exposingAddressTo(htsCallsAddress::set)
                         .via("mintContractCreateTxn"),
                 uploadInitCode(ASSOCIATE_CONTRACT),
-                contractCreate(ASSOCIATE_CONTRACT).gas(GAS_TO_OFFER)
+                contractCreate(ASSOCIATE_CONTRACT)
+                        .gas(GAS_TO_OFFER)
                         .exposingAddressTo(associateContractAddress::set)
                         .via("associateContractCreateTxn"),
 
@@ -434,39 +462,50 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
 
                 // Mint, Associate and Transfer tokens to contract
                 sourcing(() -> atomicBatchDefaultOperator(
-                        // Mint FT
-                        contractCall(HTS_CALLS_CONTRACT, "mintTokenCall", fungibleAddress.get(),
-                                BigInteger.valueOf(10L), new byte[][]{})
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("callFTTokenMintContractInnerTxn"),
-                        // Mint NFT
-                        contractCall(HTS_CALLS_CONTRACT, "mintTokenCall", nonFungibleAddress.get(),
-                                BigInteger.valueOf(0L),
-                                new byte[][]{"nft1".getBytes(), "nft2".getBytes(), "nft3".getBytes()})
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("callNftMintContractInnerTxn"),
-                        // Associate FT to the associate contract
-                        contractCall(ASSOCIATE_CONTRACT, "associateTokenToThisContract", fungibleAddress.get())
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("associateFungibleTokenContractInnerTxn"),
-                        // Associate NFT to the associate contract
-                        contractCall(ASSOCIATE_CONTRACT, "associateTokenToThisContract", nonFungibleAddress.get())
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("associateNonFungibleTokenContractInnerTxn"),
-                        // Transfer FT to contract
-                        cryptoTransfer(moving(5, FT_TOKEN).between(OWNER, ASSOCIATE_CONTRACT))
-                                .payingWith(OWNER)
-                                .signedBy(OWNER)
-                                .via("transferFungibleTokenToContractInnerTxn"),
-                        // Transfer NFT to contract
-                        cryptoTransfer(movingUnique(NON_FUNGIBLE_TOKEN, 1L).between(OWNER, ASSOCIATE_CONTRACT))
-                                .payingWith(OWNER)
-                                .signedBy(OWNER)
-                                .via("transferNftToContractInnerTxn"))
+                                // Mint FT
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "mintTokenCall",
+                                                fungibleAddress.get(),
+                                                BigInteger.valueOf(10L),
+                                                new byte[][] {})
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("callFTTokenMintContractInnerTxn"),
+                                // Mint NFT
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "mintTokenCall",
+                                                nonFungibleAddress.get(),
+                                                BigInteger.valueOf(0L),
+                                                new byte[][] {"nft1".getBytes(), "nft2".getBytes(), "nft3".getBytes()})
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("callNftMintContractInnerTxn"),
+                                // Associate FT to the associate contract
+                                contractCall(ASSOCIATE_CONTRACT, "associateTokenToThisContract", fungibleAddress.get())
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("associateFungibleTokenContractInnerTxn"),
+                                // Associate NFT to the associate contract
+                                contractCall(
+                                                ASSOCIATE_CONTRACT,
+                                                "associateTokenToThisContract",
+                                                nonFungibleAddress.get())
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("associateNonFungibleTokenContractInnerTxn"),
+                                // Transfer FT to contract
+                                cryptoTransfer(moving(5, FT_TOKEN).between(OWNER, ASSOCIATE_CONTRACT))
+                                        .payingWith(OWNER)
+                                        .signedBy(OWNER)
+                                        .via("transferFungibleTokenToContractInnerTxn"),
+                                // Transfer NFT to contract
+                                cryptoTransfer(movingUnique(NON_FUNGIBLE_TOKEN, 1L)
+                                                .between(OWNER, ASSOCIATE_CONTRACT))
+                                        .payingWith(OWNER)
+                                        .signedBy(OWNER)
+                                        .via("transferNftToContractInnerTxn"))
                         .payingWith(DEFAULT_BATCH_OPERATOR)
                         .via("atomicBatchTxn")
                         .hasKnownStatus(SUCCESS)),
@@ -475,9 +514,7 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                 getTokenInfo(FT_TOKEN).hasTotalSupply(10L),
                 getTokenInfo(NON_FUNGIBLE_TOKEN).hasTotalSupply(3L),
                 // Assert the owner account has the token
-                getAccountBalance(OWNER)
-                        .hasTokenBalance(FT_TOKEN, 5L)
-                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 2L),
+                getAccountBalance(OWNER).hasTokenBalance(FT_TOKEN, 5L).hasTokenBalance(NON_FUNGIBLE_TOKEN, 2L),
                 // Assert the receiver associated account has the token
                 getAccountBalance(ASSOCIATE_CONTRACT)
                         .hasTokenBalance(FT_TOKEN, 5L)
@@ -485,9 +522,10 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
     }
 
     @HapiTest
-    @DisplayName("Create token with contract for treasury, call contracts for tokens mint, associate, transfer and burn" +
-            " success in atomic batch")
-    final Stream<DynamicTest> updateTreasuryToContractCallContractsForMintAssociateTransferAndBurnSuccessInAtomicBatch() {
+    @DisplayName("Create token with contract for treasury, call contracts for tokens mint, associate, transfer and burn"
+            + " success in atomic batch")
+    final Stream<DynamicTest>
+            updateTreasuryToContractCallContractsForMintAssociateTransferAndBurnSuccessInAtomicBatch() {
         final AtomicReference<Address> fungibleAddress = new AtomicReference<>();
         final AtomicReference<Address> nonFungibleAddress = new AtomicReference<>();
         final AtomicReference<Address> receiverAddressFirst = new AtomicReference<>();
@@ -499,11 +537,13 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                 // Create accounts, keys and tokens, create contracts and upload their init codes
                 createAccountsAndKeys(receiverAddressFirst, receiverAddressSecond),
                 uploadInitCode(HTS_CALLS_CONTRACT),
-                contractCreate(HTS_CALLS_CONTRACT).gas(GAS_TO_OFFER)
+                contractCreate(HTS_CALLS_CONTRACT)
+                        .gas(GAS_TO_OFFER)
                         .exposingAddressTo(htsCallsAddress::set)
                         .via("mintContractCreateTxn"),
                 uploadInitCode(ASSOCIATE_CONTRACT),
-                contractCreate(ASSOCIATE_CONTRACT).gas(GAS_TO_OFFER)
+                contractCreate(ASSOCIATE_CONTRACT)
+                        .gas(GAS_TO_OFFER)
                         .exposingAddressTo(associateContractAddress::set)
                         .via("associateContractCreateTxn"),
 
@@ -512,59 +552,91 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                 createFungibleTokenWithAdminKeyAndSaveAddress(
                         FT_TOKEN, 0L, OWNER, adminKey, CONTRACT_KEY, CONTRACT_KEY, fungibleAddress),
                 createNonFungibleTokenWithAdminKeyAndSaveAddress(
-                        NON_FUNGIBLE_TOKEN, 0L, HTS_CALLS_CONTRACT, adminKey, CONTRACT_KEY, CONTRACT_KEY, nonFungibleAddress),
+                        NON_FUNGIBLE_TOKEN,
+                        0L,
+                        HTS_CALLS_CONTRACT,
+                        adminKey,
+                        CONTRACT_KEY,
+                        CONTRACT_KEY,
+                        nonFungibleAddress),
                 tokenAssociate(RECEIVER_ASSOCIATED_FIRST, FT_TOKEN, NON_FUNGIBLE_TOKEN),
 
                 // Mint, Associate, Transfer and Burn tokens to contract in atomic bacth
                 sourcing(() -> atomicBatchDefaultOperator(
-                        // Mint FT
-                        contractCall(HTS_CALLS_CONTRACT, "mintTokenCall", fungibleAddress.get(),
-                                BigInteger.valueOf(10L), new byte[][]{})
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("callFTTokenMintContractInnerTxn"),
-                        // Mint NFT
-                        contractCall(HTS_CALLS_CONTRACT, "mintTokenCall", nonFungibleAddress.get(),
-                                BigInteger.valueOf(0L),
-                                new byte[][]{"nft1".getBytes(), "nft2".getBytes(), "nft3".getBytes(), "nft4".getBytes()})
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("callNftMintContractInnerTxn"),
-                        // Associate FT to the associate contract
-                        contractCall(ASSOCIATE_CONTRACT, "associateTokenToThisContract", fungibleAddress.get())
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("associateFungibleTokenContractInnerTxn"),
-                        // Associate NFT to the associate contract
-                        contractCall(ASSOCIATE_CONTRACT, "associateTokenToThisContract", nonFungibleAddress.get())
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("associateNonFungibleTokenContractInnerTxn"),
-                        // Transfer FT to contract with crypto transfer
-                        cryptoTransfer(moving(5, FT_TOKEN).between(OWNER, ASSOCIATE_CONTRACT))
-                                .payingWith(OWNER)
-                                .signedBy(OWNER)
-                                .via("transferFungibleTokenToContractInnerTxn"),
-                        // Transfer NFT to contract with contract call
-                        contractCall(HTS_CALLS_CONTRACT, "transferNFTCall",
-                                nonFungibleAddress.get(), htsCallsAddress.get(),
-                                associateContractAddress.get(),  1L)
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("transferNftToContractInnerTxn"),
-                        // Burn FT with contract call
-                        contractCall(HTS_CALLS_CONTRACT, "burnTokenCall", fungibleAddress.get(),
-                                BigInteger.valueOf(1L), new long[]{})
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("callFtBurnContractInnerTxn"),
-                        // Burn NFT with contract call
-                        contractCall(HTS_CALLS_CONTRACT, "burnTokenCall", nonFungibleAddress.get(),
-                                BigInteger.ZERO,
-                                new long[]{2L})
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("callNftBurnContractInnerTxn"))
+                                // Mint FT
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "mintTokenCall",
+                                                fungibleAddress.get(),
+                                                BigInteger.valueOf(10L),
+                                                new byte[][] {})
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("callFTTokenMintContractInnerTxn"),
+                                // Mint NFT
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "mintTokenCall",
+                                                nonFungibleAddress.get(),
+                                                BigInteger.valueOf(0L),
+                                                new byte[][] {
+                                                    "nft1".getBytes(),
+                                                    "nft2".getBytes(),
+                                                    "nft3".getBytes(),
+                                                    "nft4".getBytes()
+                                                })
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("callNftMintContractInnerTxn"),
+                                // Associate FT to the associate contract
+                                contractCall(ASSOCIATE_CONTRACT, "associateTokenToThisContract", fungibleAddress.get())
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("associateFungibleTokenContractInnerTxn"),
+                                // Associate NFT to the associate contract
+                                contractCall(
+                                                ASSOCIATE_CONTRACT,
+                                                "associateTokenToThisContract",
+                                                nonFungibleAddress.get())
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("associateNonFungibleTokenContractInnerTxn"),
+                                // Transfer FT to contract with crypto transfer
+                                cryptoTransfer(moving(5, FT_TOKEN).between(OWNER, ASSOCIATE_CONTRACT))
+                                        .payingWith(OWNER)
+                                        .signedBy(OWNER)
+                                        .via("transferFungibleTokenToContractInnerTxn"),
+                                // Transfer NFT to contract with contract call
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "transferNFTCall",
+                                                nonFungibleAddress.get(),
+                                                htsCallsAddress.get(),
+                                                associateContractAddress.get(),
+                                                1L)
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("transferNftToContractInnerTxn"),
+                                // Burn FT with contract call
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "burnTokenCall",
+                                                fungibleAddress.get(),
+                                                BigInteger.valueOf(1L),
+                                                new long[] {})
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("callFtBurnContractInnerTxn"),
+                                // Burn NFT with contract call
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "burnTokenCall",
+                                                nonFungibleAddress.get(),
+                                                BigInteger.ZERO,
+                                                new long[] {2L})
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("callNftBurnContractInnerTxn"))
                         .payingWith(DEFAULT_BATCH_OPERATOR)
                         .via("atomicBatchTxn")
                         .hasKnownStatus(SUCCESS)),
@@ -573,9 +645,7 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                 getTokenInfo(FT_TOKEN).hasTotalSupply(9L),
                 getTokenInfo(NON_FUNGIBLE_TOKEN).hasTotalSupply(3L),
                 // Assert the owner account has the token
-                getAccountBalance(OWNER)
-                        .hasTokenBalance(FT_TOKEN, 4L)
-                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L),
+                getAccountBalance(OWNER).hasTokenBalance(FT_TOKEN, 4L).hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L),
                 // Assert the receiver associated account has the token
                 getAccountBalance(ASSOCIATE_CONTRACT)
                         .hasTokenBalance(FT_TOKEN, 5L)
@@ -583,13 +653,12 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                 // Assert the contract has the NFT
                 getAccountBalance(HTS_CALLS_CONTRACT)
                         .hasTokenBalance(FT_TOKEN, 0L)
-                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 2L)
-        ));
+                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 2L)));
     }
 
     @HapiTest
-    @DisplayName("Update token treasury with contract with updated maxAutoAssociations and mint tokens" +
-            " success in atomic batch")
+    @DisplayName("Update token treasury with contract with updated maxAutoAssociations and mint tokens"
+            + " success in atomic batch")
     final Stream<DynamicTest> updateTokenTreasuryWithContractAndMintTokensSuccessInAtomicBatch() {
         final AtomicReference<Address> fungibleAddress = new AtomicReference<>();
         final AtomicReference<Address> nonFungibleAddress = new AtomicReference<>();
@@ -608,7 +677,8 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                         .exposingAddressTo(htsCallsAddress::set)
                         .via("mintContractCreateTxn"),
                 uploadInitCode(ASSOCIATE_CONTRACT),
-                contractCreate(ASSOCIATE_CONTRACT).gas(GAS_TO_OFFER)
+                contractCreate(ASSOCIATE_CONTRACT)
+                        .gas(GAS_TO_OFFER)
                         .exposingAddressTo(associateContractAddress::set)
                         .via("associateContractCreateTxn"),
 
@@ -622,30 +692,42 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
 
                 // Mint and Associate tokens to contract
                 sourcing(() -> atomicBatchDefaultOperator(
-                        // Update tokens treasury to be contract address
-                        tokenUpdate(FT_TOKEN)
-                                .treasury(HTS_CALLS_CONTRACT)
-                                .payingWith(OWNER)
-                                .signedBy(HTS_CALLS_CONTRACT, OWNER, adminKey)
-                                .via("updateFungibleTokenTreasuryToContractInnerTxn"),
-                        tokenUpdate(NON_FUNGIBLE_TOKEN)
-                                .treasury(HTS_CALLS_CONTRACT)
-                                .payingWith(OWNER)
-                                .signedBy(HTS_CALLS_CONTRACT, OWNER, adminKey)
-                                .via("updateNonFungibleTokenTreasuryToContractInnerTxn"),
-                        // Mint FT
-                        contractCall(HTS_CALLS_CONTRACT, "mintTokenCall", fungibleAddress.get(),
-                                BigInteger.valueOf(10L), new byte[][]{})
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("callFTTokenMintContractInnerTxn"),
-                        // Mint NFT
-                        contractCall(HTS_CALLS_CONTRACT, "mintTokenCall", nonFungibleAddress.get(),
-                                BigInteger.valueOf(0L),
-                                new byte[][]{"nft1".getBytes(), "nft2".getBytes(), "nft3".getBytes(), "nft4".getBytes()})
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("callNftMintContractInnerTxn"))
+                                // Update tokens treasury to be contract address
+                                tokenUpdate(FT_TOKEN)
+                                        .treasury(HTS_CALLS_CONTRACT)
+                                        .payingWith(OWNER)
+                                        .signedBy(HTS_CALLS_CONTRACT, OWNER, adminKey)
+                                        .via("updateFungibleTokenTreasuryToContractInnerTxn"),
+                                tokenUpdate(NON_FUNGIBLE_TOKEN)
+                                        .treasury(HTS_CALLS_CONTRACT)
+                                        .payingWith(OWNER)
+                                        .signedBy(HTS_CALLS_CONTRACT, OWNER, adminKey)
+                                        .via("updateNonFungibleTokenTreasuryToContractInnerTxn"),
+                                // Mint FT
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "mintTokenCall",
+                                                fungibleAddress.get(),
+                                                BigInteger.valueOf(10L),
+                                                new byte[][] {})
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("callFTTokenMintContractInnerTxn"),
+                                // Mint NFT
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "mintTokenCall",
+                                                nonFungibleAddress.get(),
+                                                BigInteger.valueOf(0L),
+                                                new byte[][] {
+                                                    "nft1".getBytes(),
+                                                    "nft2".getBytes(),
+                                                    "nft3".getBytes(),
+                                                    "nft4".getBytes()
+                                                })
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("callNftMintContractInnerTxn"))
                         .payingWith(DEFAULT_BATCH_OPERATOR)
                         .via("atomicBatchTxn")
                         .hasKnownStatus(SUCCESS)),
@@ -654,19 +736,16 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                 getTokenInfo(FT_TOKEN).hasTotalSupply(10L),
                 getTokenInfo(NON_FUNGIBLE_TOKEN).hasTotalSupply(4L),
                 // Assert the owner account has no token
-                getAccountBalance(OWNER)
-                        .hasTokenBalance(FT_TOKEN, 0L)
-                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L),
+                getAccountBalance(OWNER).hasTokenBalance(FT_TOKEN, 0L).hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L),
                 // Assert the treasury contract has the tokens
                 getAccountBalance(HTS_CALLS_CONTRACT)
                         .hasTokenBalance(FT_TOKEN, 10L)
-                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 4L)
-        ));
+                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 4L)));
     }
 
     @HapiTest
-    @DisplayName("Update token treasury with contract with updated maxAutoAssociations, mint and associate tokens" +
-            " success in atomic batch")
+    @DisplayName("Update token treasury with contract with updated maxAutoAssociations, mint and associate tokens"
+            + " success in atomic batch")
     final Stream<DynamicTest> updateTokenTreasuryWithContractMintAndAssociateTokensSuccessInAtomicBatch() {
         final AtomicReference<Address> fungibleAddress = new AtomicReference<>();
         final AtomicReference<Address> nonFungibleAddress = new AtomicReference<>();
@@ -685,7 +764,8 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                         .exposingAddressTo(htsCallsAddress::set)
                         .via("mintContractCreateTxn"),
                 uploadInitCode(ASSOCIATE_CONTRACT),
-                contractCreate(ASSOCIATE_CONTRACT).gas(GAS_TO_OFFER)
+                contractCreate(ASSOCIATE_CONTRACT)
+                        .gas(GAS_TO_OFFER)
                         .exposingAddressTo(associateContractAddress::set)
                         .via("associateContractCreateTxn"),
 
@@ -699,40 +779,55 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
 
                 // Mint and Associate tokens to contract
                 sourcing(() -> atomicBatchDefaultOperator(
-                        // Update tokens treasury to be contract address
-                        tokenUpdate(FT_TOKEN)
-                                .treasury(HTS_CALLS_CONTRACT)
-                                .payingWith(OWNER)
-                                .signedBy(HTS_CALLS_CONTRACT, OWNER, adminKey)
-                                .via("updateFungibleTokenTreasuryToContractInnerTxn"),
-                        tokenUpdate(NON_FUNGIBLE_TOKEN)
-                                .treasury(HTS_CALLS_CONTRACT)
-                                .payingWith(OWNER)
-                                .signedBy(HTS_CALLS_CONTRACT, OWNER, adminKey)
-                                .via("updateNonFungibleTokenTreasuryToContractInnerTxn"),
-                        // Mint FT
-                        contractCall(HTS_CALLS_CONTRACT, "mintTokenCall", fungibleAddress.get(),
-                                BigInteger.valueOf(10L), new byte[][]{})
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("callFTTokenMintContractInnerTxn"),
-                        // Mint NFT
-                        contractCall(HTS_CALLS_CONTRACT, "mintTokenCall", nonFungibleAddress.get(),
-                                BigInteger.valueOf(0L),
-                                new byte[][]{"nft1".getBytes(), "nft2".getBytes(), "nft3".getBytes(), "nft4".getBytes()})
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("callNftMintContractInnerTxn"),
-                        // Associate FT to the associate contract
-                        contractCall(ASSOCIATE_CONTRACT, "associateTokenToThisContract", fungibleAddress.get())
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("associateFungibleTokenContractInnerTxn"),
-                        // Associate NFT to the associate contract
-                        contractCall(ASSOCIATE_CONTRACT, "associateTokenToThisContract", nonFungibleAddress.get())
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("associateNonFungibleTokenContractInnerTxn"))
+                                // Update tokens treasury to be contract address
+                                tokenUpdate(FT_TOKEN)
+                                        .treasury(HTS_CALLS_CONTRACT)
+                                        .payingWith(OWNER)
+                                        .signedBy(HTS_CALLS_CONTRACT, OWNER, adminKey)
+                                        .via("updateFungibleTokenTreasuryToContractInnerTxn"),
+                                tokenUpdate(NON_FUNGIBLE_TOKEN)
+                                        .treasury(HTS_CALLS_CONTRACT)
+                                        .payingWith(OWNER)
+                                        .signedBy(HTS_CALLS_CONTRACT, OWNER, adminKey)
+                                        .via("updateNonFungibleTokenTreasuryToContractInnerTxn"),
+                                // Mint FT
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "mintTokenCall",
+                                                fungibleAddress.get(),
+                                                BigInteger.valueOf(10L),
+                                                new byte[][] {})
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("callFTTokenMintContractInnerTxn"),
+                                // Mint NFT
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "mintTokenCall",
+                                                nonFungibleAddress.get(),
+                                                BigInteger.valueOf(0L),
+                                                new byte[][] {
+                                                    "nft1".getBytes(),
+                                                    "nft2".getBytes(),
+                                                    "nft3".getBytes(),
+                                                    "nft4".getBytes()
+                                                })
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("callNftMintContractInnerTxn"),
+                                // Associate FT to the associate contract
+                                contractCall(ASSOCIATE_CONTRACT, "associateTokenToThisContract", fungibleAddress.get())
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("associateFungibleTokenContractInnerTxn"),
+                                // Associate NFT to the associate contract
+                                contractCall(
+                                                ASSOCIATE_CONTRACT,
+                                                "associateTokenToThisContract",
+                                                nonFungibleAddress.get())
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("associateNonFungibleTokenContractInnerTxn"))
                         .payingWith(DEFAULT_BATCH_OPERATOR)
                         .via("atomicBatchTxn")
                         .hasKnownStatus(SUCCESS)),
@@ -741,9 +836,7 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                 getTokenInfo(FT_TOKEN).hasTotalSupply(10L),
                 getTokenInfo(NON_FUNGIBLE_TOKEN).hasTotalSupply(4L),
                 // Assert the owner account has no tokens
-                getAccountBalance(OWNER)
-                        .hasTokenBalance(FT_TOKEN, 0L)
-                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L),
+                getAccountBalance(OWNER).hasTokenBalance(FT_TOKEN, 0L).hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L),
                 // Assert the receiver associated account does not have tokens but is associated with them
                 getAccountBalance(ASSOCIATE_CONTRACT)
                         .hasTokenBalance(FT_TOKEN, 0L)
@@ -754,14 +847,14 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                 // Assert the treasury contract has the tokens
                 getAccountBalance(HTS_CALLS_CONTRACT)
                         .hasTokenBalance(FT_TOKEN, 10L)
-                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 4L)
-        ));
+                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 4L)));
     }
 
     @HapiTest
-    @DisplayName("Update token treasury with contract with updated maxAutoAssociations, associate contract, " +
-            "mint and transfer success in atomic batch")
-    final Stream<DynamicTest> updateTokenTreasuryWithContractWithAutoAssociationsAssociateMintAndTransferSuccessInAtomicBatch() {
+    @DisplayName("Update token treasury with contract with updated maxAutoAssociations, associate contract, "
+            + "mint and transfer success in atomic batch")
+    final Stream<DynamicTest>
+            updateTokenTreasuryWithContractWithAutoAssociationsAssociateMintAndTransferSuccessInAtomicBatch() {
         final AtomicReference<Address> fungibleAddress = new AtomicReference<>();
         final AtomicReference<Address> nonFungibleAddress = new AtomicReference<>();
         final AtomicReference<Address> receiverAddressFirst = new AtomicReference<>();
@@ -779,7 +872,8 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                         .exposingAddressTo(htsCallsAddress::set)
                         .via("mintContractCreateTxn"),
                 uploadInitCode(ASSOCIATE_CONTRACT),
-                contractCreate(ASSOCIATE_CONTRACT).gas(GAS_TO_OFFER)
+                contractCreate(ASSOCIATE_CONTRACT)
+                        .gas(GAS_TO_OFFER)
                         .exposingAddressTo(associateContractAddress::set)
                         .via("associateContractCreateTxn"),
 
@@ -793,52 +887,71 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
 
                 //  Mint, Associate and Transfer tokens to contract
                 sourcing(() -> atomicBatchDefaultOperator(
-                        // Update tokens treasury to be contract address
-                        tokenUpdate(FT_TOKEN)
-                                .treasury(HTS_CALLS_CONTRACT)
-                                .payingWith(OWNER)
-                                .signedBy(HTS_CALLS_CONTRACT, OWNER, adminKey)
-                                .via("updateFungibleTokenTreasuryToContractInnerTxn"),
-                        tokenUpdate(NON_FUNGIBLE_TOKEN)
-                                .treasury(HTS_CALLS_CONTRACT)
-                                .payingWith(OWNER)
-                                .signedBy(HTS_CALLS_CONTRACT, OWNER, adminKey)
-                                .via("updateNonFungibleTokenTreasuryToContractInnerTxn"),
-                        // Mint FT
-                        contractCall(HTS_CALLS_CONTRACT, "mintTokenCall", fungibleAddress.get(),
-                                BigInteger.valueOf(10L), new byte[][]{})
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("callFTTokenMintContractInnerTxn"),
-                        // Mint NFT
-                        contractCall(HTS_CALLS_CONTRACT, "mintTokenCall", nonFungibleAddress.get(),
-                                BigInteger.valueOf(0L),
-                                new byte[][]{"nft1".getBytes(), "nft2".getBytes(), "nft3".getBytes(), "nft4".getBytes()})
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("callNftMintContractInnerTxn"),
-                        // Associate FT to the associate contract
-                        contractCall(ASSOCIATE_CONTRACT, "associateTokenToThisContract", fungibleAddress.get())
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("associateFungibleTokenContractInnerTxn"),
-                        // Associate NFT to the associate contract
-                        contractCall(ASSOCIATE_CONTRACT, "associateTokenToThisContract", nonFungibleAddress.get())
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("associateNonFungibleTokenContractInnerTxn"),
-                        // Transfer FT to contract with crypto transfer
-                        cryptoTransfer(moving(5, FT_TOKEN).between(HTS_CALLS_CONTRACT, ASSOCIATE_CONTRACT))
-                                .payingWith(OWNER)
-                                .signedBy(OWNER, HTS_CALLS_CONTRACT)
-                                .via("transferFungibleTokenToContractInnerTxn"),
-                        // Transfer NFT to contract with contract call
-                        contractCall(HTS_CALLS_CONTRACT, "transferNFTCall",
-                                nonFungibleAddress.get(), htsCallsAddress.get(),
-                                associateContractAddress.get(),  1L)
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("transferNftToContractInnerTxn"))
+                                // Update tokens treasury to be contract address
+                                tokenUpdate(FT_TOKEN)
+                                        .treasury(HTS_CALLS_CONTRACT)
+                                        .payingWith(OWNER)
+                                        .signedBy(HTS_CALLS_CONTRACT, OWNER, adminKey)
+                                        .via("updateFungibleTokenTreasuryToContractInnerTxn"),
+                                tokenUpdate(NON_FUNGIBLE_TOKEN)
+                                        .treasury(HTS_CALLS_CONTRACT)
+                                        .payingWith(OWNER)
+                                        .signedBy(HTS_CALLS_CONTRACT, OWNER, adminKey)
+                                        .via("updateNonFungibleTokenTreasuryToContractInnerTxn"),
+                                // Mint FT
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "mintTokenCall",
+                                                fungibleAddress.get(),
+                                                BigInteger.valueOf(10L),
+                                                new byte[][] {})
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("callFTTokenMintContractInnerTxn"),
+                                // Mint NFT
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "mintTokenCall",
+                                                nonFungibleAddress.get(),
+                                                BigInteger.valueOf(0L),
+                                                new byte[][] {
+                                                    "nft1".getBytes(),
+                                                    "nft2".getBytes(),
+                                                    "nft3".getBytes(),
+                                                    "nft4".getBytes()
+                                                })
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("callNftMintContractInnerTxn"),
+                                // Associate FT to the associate contract
+                                contractCall(ASSOCIATE_CONTRACT, "associateTokenToThisContract", fungibleAddress.get())
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("associateFungibleTokenContractInnerTxn"),
+                                // Associate NFT to the associate contract
+                                contractCall(
+                                                ASSOCIATE_CONTRACT,
+                                                "associateTokenToThisContract",
+                                                nonFungibleAddress.get())
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("associateNonFungibleTokenContractInnerTxn"),
+                                // Transfer FT to contract with crypto transfer
+                                cryptoTransfer(moving(5, FT_TOKEN).between(HTS_CALLS_CONTRACT, ASSOCIATE_CONTRACT))
+                                        .payingWith(OWNER)
+                                        .signedBy(OWNER, HTS_CALLS_CONTRACT)
+                                        .via("transferFungibleTokenToContractInnerTxn"),
+                                // Transfer NFT to contract with contract call
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "transferNFTCall",
+                                                nonFungibleAddress.get(),
+                                                htsCallsAddress.get(),
+                                                associateContractAddress.get(),
+                                                1L)
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("transferNftToContractInnerTxn"))
                         .payingWith(DEFAULT_BATCH_OPERATOR)
                         .via("atomicBatchTxn")
                         .hasKnownStatus(SUCCESS)),
@@ -847,9 +960,7 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                 getTokenInfo(FT_TOKEN).hasTotalSupply(10L),
                 getTokenInfo(NON_FUNGIBLE_TOKEN).hasTotalSupply(4L),
                 // Assert the owner account has no tokens
-                getAccountBalance(OWNER)
-                        .hasTokenBalance(FT_TOKEN, 0L)
-                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L),
+                getAccountBalance(OWNER).hasTokenBalance(FT_TOKEN, 0L).hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L),
                 // Assert the receiver associated account has the token
                 getAccountBalance(ASSOCIATE_CONTRACT)
                         .hasTokenBalance(FT_TOKEN, 5L)
@@ -857,13 +968,12 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                 // Assert the treasury contract has the tokens
                 getAccountBalance(HTS_CALLS_CONTRACT)
                         .hasTokenBalance(FT_TOKEN, 5L)
-                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 3L)
-        ));
+                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 3L)));
     }
 
     @HapiTest
-    @DisplayName("Call contract for NFT tokens mint, associate to contract and transfer from contract to contract" +
-            " and to EOA success in atomic batch")
+    @DisplayName("Call contract for NFT tokens mint, associate to contract and transfer from contract to contract"
+            + " and to EOA success in atomic batch")
     final Stream<DynamicTest> callContractsForNFTMintAndTransferFromContractToEOASuccessInAtomicBatch() {
         final AtomicReference<Address> nonFungibleAddress = new AtomicReference<>();
         final AtomicReference<Address> receiverAddressFirst = new AtomicReference<>();
@@ -890,37 +1000,62 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                 // Use the contract as the supplyKey for minting
                 newKeyNamed(CONTRACT_KEY).shape(CONTRACT.signedWith(HTS_CALLS_CONTRACT)),
                 createNonFungibleTokenWithAdminKeyAndSaveAddress(
-                        NON_FUNGIBLE_TOKEN, 0L, HTS_CALLS_CONTRACT, adminKey, CONTRACT_KEY, CONTRACT_KEY, nonFungibleAddress),
+                        NON_FUNGIBLE_TOKEN,
+                        0L,
+                        HTS_CALLS_CONTRACT,
+                        adminKey,
+                        CONTRACT_KEY,
+                        CONTRACT_KEY,
+                        nonFungibleAddress),
                 tokenAssociate(RECEIVER_ASSOCIATED_FIRST, NON_FUNGIBLE_TOKEN),
 
                 // Mint, Associate and Transfer NFT tokens to contract and EOA in atomic batch
                 sourcing(() -> atomicBatchDefaultOperator(
-                        // Mint NFT
-                        contractCall(HTS_CALLS_CONTRACT, "mintTokenCall", nonFungibleAddress.get(),
-                                BigInteger.valueOf(0L),
-                                new byte[][]{"nft1".getBytes(), "nft2".getBytes(), "nft3".getBytes(), "nft4".getBytes()})
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("callNftMintContractInnerTxn"),
-                        // Associate NFT to the associate contract
-                        contractCall(ASSOCIATE_CONTRACT, "associateTokenToThisContract", nonFungibleAddress.get())
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("associateNonFungibleTokenContractInnerTxn"),
-                        // Transfer NFT from treasury contract to associated contract
-                        contractCall(HTS_CALLS_CONTRACT, "transferNFTCall",
-                                nonFungibleAddress.get(), htsCallsAddress.get(),
-                                associateContractAddress.get(), 1L)
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("transferNftToContractInnerTxn"),
-                        // transfer from treasury contract to EOA
-                        contractCall(HTS_CALLS_CONTRACT, "transferNFTCall",
-                                nonFungibleAddress.get(), htsCallsAddress.get(),
-                                receiverAddressFirst.get(), 2L)
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("transferNftToContractInnerTxn"))
+                                // Mint NFT
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "mintTokenCall",
+                                                nonFungibleAddress.get(),
+                                                BigInteger.valueOf(0L),
+                                                new byte[][] {
+                                                    "nft1".getBytes(),
+                                                    "nft2".getBytes(),
+                                                    "nft3".getBytes(),
+                                                    "nft4".getBytes()
+                                                })
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("callNftMintContractInnerTxn"),
+                                // Associate NFT to the associate contract
+                                contractCall(
+                                                ASSOCIATE_CONTRACT,
+                                                "associateTokenToThisContract",
+                                                nonFungibleAddress.get())
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("associateNonFungibleTokenContractInnerTxn"),
+                                // Transfer NFT from treasury contract to associated contract
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "transferNFTCall",
+                                                nonFungibleAddress.get(),
+                                                htsCallsAddress.get(),
+                                                associateContractAddress.get(),
+                                                1L)
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("transferNftToContractInnerTxn"),
+                                // transfer from treasury contract to EOA
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "transferNFTCall",
+                                                nonFungibleAddress.get(),
+                                                htsCallsAddress.get(),
+                                                receiverAddressFirst.get(),
+                                                2L)
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("transferNftToContractInnerTxn"))
                         .payingWith(DEFAULT_BATCH_OPERATOR)
                         .via("atomicBatchTxn")
                         .hasKnownStatus(SUCCESS)),
@@ -928,22 +1063,18 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                 // Assert the tokens supply is updated correctly
                 getTokenInfo(NON_FUNGIBLE_TOKEN).hasTotalSupply(4L),
                 // Assert the owner account has no token
-                getAccountBalance(OWNER)
-                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L),
+                getAccountBalance(OWNER).hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L),
                 // Assert the treasury contract has remaining tokens
-                getAccountBalance(HTS_CALLS_CONTRACT)
-                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 2L),
+                getAccountBalance(HTS_CALLS_CONTRACT).hasTokenBalance(NON_FUNGIBLE_TOKEN, 2L),
                 // Assert the receiver associated account has token
-                getAccountBalance(ASSOCIATE_CONTRACT)
-                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 1L),
+                getAccountBalance(ASSOCIATE_CONTRACT).hasTokenBalance(NON_FUNGIBLE_TOKEN, 1L),
                 // Assert the EOA has token
-                getAccountBalance(RECEIVER_ASSOCIATED_FIRST)
-                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 1L)));
+                getAccountBalance(RECEIVER_ASSOCIATED_FIRST).hasTokenBalance(NON_FUNGIBLE_TOKEN, 1L)));
     }
-    
+
     @HapiTest
-    @DisplayName("Call contract for FT token mint and transfer minted tokens to not associated receiver " +
-            "fails in atomic batch")
+    @DisplayName("Call contract for FT token mint and transfer minted tokens to not associated receiver "
+            + "fails in atomic batch")
     final Stream<DynamicTest> createContractForTokenMintCallAndTransferTokensToNotAssociatedAccountInAtomicBatch() {
         final AtomicReference<Address> fungibleAddress = new AtomicReference<>();
         final AtomicReference<Address> contractAddress = new AtomicReference<>();
@@ -952,13 +1083,13 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
 
         // Transfer token from treasury to associated and not associated receivers
         final var transferMintedTokenToAssociatedReceiverInnerTxn = cryptoTransfer(
-                moving(1, FT_TOKEN).between(OWNER, RECEIVER_ASSOCIATED_FIRST))
+                        moving(1, FT_TOKEN).between(OWNER, RECEIVER_ASSOCIATED_FIRST))
                 .payingWith(OWNER)
                 .signedBy(OWNER)
                 .via("transferTokenInnerTxn");
 
         final var transferMintedTokenToNotAssociatedReceiverInnerTxn = cryptoTransfer(
-                moving(1, FT_TOKEN).between(OWNER, RECEIVER_NOT_ASSOCIATED))
+                        moving(1, FT_TOKEN).between(OWNER, RECEIVER_NOT_ASSOCIATED))
                 .payingWith(OWNER)
                 .signedBy(OWNER)
                 .via("transferTokenInnerTxn")
@@ -976,30 +1107,29 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                 createFungibleTokenWithAdminKeyAndSaveAddress(
                         FT_TOKEN, 0L, OWNER, adminKey, supplyKey, wipeKey, fungibleAddress),
                 uploadInitCode(HTS_CALLS_CONTRACT),
-                contractCreate(HTS_CALLS_CONTRACT).gas(GAS_TO_OFFER)
+                contractCreate(HTS_CALLS_CONTRACT)
+                        .gas(GAS_TO_OFFER)
                         .exposingAddressTo(contractAddress::set)
                         .via("contractCreateTxn"),
 
                 // Make the contract the supply-key of the fungible token so that it can mint tokens
                 newKeyNamed(CONTRACT_KEY).shape(CONTRACT.signedWith(HTS_CALLS_CONTRACT)),
-                tokenUpdate(FT_TOKEN)
-                        .supplyKey(CONTRACT_KEY)
-                        .payingWith(OWNER)
-                        .signedBy(OWNER, adminKey),
+                tokenUpdate(FT_TOKEN).supplyKey(CONTRACT_KEY).payingWith(OWNER).signedBy(OWNER, adminKey),
 
                 // Call the contract in atomic batch
                 sourcing(() -> atomicBatchDefaultOperator(
-                        contractCall(HTS_CALLS_CONTRACT,
-                                "mintTokenCall",
-                                fungibleAddress.get(),
-                                java.math.BigInteger.valueOf(10L),
-                                new byte[][]{})
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("callTokenMintContractInnerTxn"),
-                        associateFungibleTokenInnerTxn,
-                        transferMintedTokenToAssociatedReceiverInnerTxn,
-                        transferMintedTokenToNotAssociatedReceiverInnerTxn)
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "mintTokenCall",
+                                                fungibleAddress.get(),
+                                                java.math.BigInteger.valueOf(10L),
+                                                new byte[][] {})
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("callTokenMintContractInnerTxn"),
+                                associateFungibleTokenInnerTxn,
+                                transferMintedTokenToAssociatedReceiverInnerTxn,
+                                transferMintedTokenToNotAssociatedReceiverInnerTxn)
                         .payingWith(DEFAULT_BATCH_OPERATOR)
                         .via("atomicBatchTxn")
                         .hasKnownStatus(INNER_TRANSACTION_FAILED)),
@@ -1013,9 +1143,10 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
     }
 
     @HapiTest
-    @DisplayName("Call contracts for FT and NFT token mint and token associate, transfer to not associated contract" +
-            " fails in atomic batch")
-    final Stream<DynamicTest> callContractsForMintBurnAndAssociateAndTransferToNotAssociatedContractFailsInAtomicBatch() {
+    @DisplayName("Call contracts for FT and NFT token mint and token associate, transfer to not associated contract"
+            + " fails in atomic batch")
+    final Stream<DynamicTest>
+            callContractsForMintBurnAndAssociateAndTransferToNotAssociatedContractFailsInAtomicBatch() {
         final AtomicReference<Address> fungibleAddress = new AtomicReference<>();
         final AtomicReference<Address> nonFungibleAddress = new AtomicReference<>();
         final AtomicReference<Address> receiverAddressFirst = new AtomicReference<>();
@@ -1027,11 +1158,13 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                 // Create accounts, keys and tokens, create contracts and upload their init codes
                 createAccountsAndKeys(receiverAddressFirst, receiverAddressSecond),
                 uploadInitCode(HTS_CALLS_CONTRACT),
-                contractCreate(HTS_CALLS_CONTRACT).gas(GAS_TO_OFFER)
+                contractCreate(HTS_CALLS_CONTRACT)
+                        .gas(GAS_TO_OFFER)
                         .exposingAddressTo(htsCallsAddress::set)
                         .via("mintContractCreateTxn"),
                 uploadInitCode(ASSOCIATE_CONTRACT),
-                contractCreate(ASSOCIATE_CONTRACT).gas(GAS_TO_OFFER)
+                contractCreate(ASSOCIATE_CONTRACT)
+                        .gas(GAS_TO_OFFER)
                         .exposingAddressTo(associateContractAddress::set)
                         .via("associateContractCreateTxn"),
 
@@ -1044,30 +1177,38 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
 
                 // Mint tokens to contract and transfer to not associated contract in atomic batch
                 sourcing(() -> atomicBatchDefaultOperator(
-                        // Mint FT
-                        contractCall(HTS_CALLS_CONTRACT, "mintTokenCall", fungibleAddress.get(),
-                                BigInteger.valueOf(10L), new byte[][]{})
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("callFTTokenMintContractInnerTxn"),
-                        // Mint NFT
-                        contractCall(HTS_CALLS_CONTRACT, "mintTokenCall", nonFungibleAddress.get(),
-                                BigInteger.valueOf(0L),
-                                new byte[][]{"nft1".getBytes(), "nft2".getBytes(), "nft3".getBytes()})
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("callNftMintContractInnerTxn"),
-                        // Transfer FT to contract
-                        cryptoTransfer(moving(5, FT_TOKEN).between(OWNER, ASSOCIATE_CONTRACT))
-                                .payingWith(OWNER)
-                                .signedBy(OWNER)
-                                .via("transferFungibleTokenToContractInnerTxn")
-                                .hasKnownStatus(TOKEN_NOT_ASSOCIATED_TO_ACCOUNT),
-                        // Transfer NFT to contract
-                        cryptoTransfer(movingUnique(NON_FUNGIBLE_TOKEN, 1L).between(OWNER, ASSOCIATE_CONTRACT))
-                                .payingWith(OWNER)
-                                .signedBy(OWNER)
-                                .via("transferNftToContractInnerTxn"))
+                                // Mint FT
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "mintTokenCall",
+                                                fungibleAddress.get(),
+                                                BigInteger.valueOf(10L),
+                                                new byte[][] {})
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("callFTTokenMintContractInnerTxn"),
+                                // Mint NFT
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "mintTokenCall",
+                                                nonFungibleAddress.get(),
+                                                BigInteger.valueOf(0L),
+                                                new byte[][] {"nft1".getBytes(), "nft2".getBytes(), "nft3".getBytes()})
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("callNftMintContractInnerTxn"),
+                                // Transfer FT to contract
+                                cryptoTransfer(moving(5, FT_TOKEN).between(OWNER, ASSOCIATE_CONTRACT))
+                                        .payingWith(OWNER)
+                                        .signedBy(OWNER)
+                                        .via("transferFungibleTokenToContractInnerTxn")
+                                        .hasKnownStatus(TOKEN_NOT_ASSOCIATED_TO_ACCOUNT),
+                                // Transfer NFT to contract
+                                cryptoTransfer(movingUnique(NON_FUNGIBLE_TOKEN, 1L)
+                                                .between(OWNER, ASSOCIATE_CONTRACT))
+                                        .payingWith(OWNER)
+                                        .signedBy(OWNER)
+                                        .via("transferNftToContractInnerTxn"))
                         .payingWith(DEFAULT_BATCH_OPERATOR)
                         .via("atomicBatchTxn")
                         .hasKnownStatus(INNER_TRANSACTION_FAILED)),
@@ -1076,9 +1217,7 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                 getTokenInfo(FT_TOKEN).hasTotalSupply(0L),
                 getTokenInfo(NON_FUNGIBLE_TOKEN).hasTotalSupply(0L),
                 // Assert the owner account has no token
-                getAccountBalance(OWNER)
-                        .hasTokenBalance(FT_TOKEN, 0L)
-                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L),
+                getAccountBalance(OWNER).hasTokenBalance(FT_TOKEN, 0L).hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L),
                 // Assert the receiver contract account has no tokens and is not associated with them
                 getAccountBalance(ASSOCIATE_CONTRACT)
                         .hasTokenBalance(FT_TOKEN, 0L)
@@ -1097,7 +1236,7 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
 
         // Transfer token from treasury to receiver associated account
         final var transferMintedTokenInnerTxn = cryptoTransfer(
-                moving(1, FT_TOKEN).between(OWNER, RECEIVER_ASSOCIATED_FIRST))
+                        moving(1, FT_TOKEN).between(OWNER, RECEIVER_ASSOCIATED_FIRST))
                 .payingWith(OWNER)
                 .signedBy(OWNER)
                 .via("transferTokenInnerTxn")
@@ -1110,27 +1249,24 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                         FT_TOKEN, 0L, OWNER, adminKey, supplyKey, wipeKey, fungibleAddress),
                 tokenAssociate(RECEIVER_ASSOCIATED_FIRST, FT_TOKEN),
                 uploadInitCode(HTS_CALLS_CONTRACT),
-                contractCreate(HTS_CALLS_CONTRACT)
-                        .gas(GAS_TO_OFFER)
-                        .via("contractCreateTxn"),
+                contractCreate(HTS_CALLS_CONTRACT).gas(GAS_TO_OFFER).via("contractCreateTxn"),
 
                 // Make the contract the supply-key of the fungible token so that it can mint tokens
                 newKeyNamed(CONTRACT_KEY).shape(CONTRACT.signedWith(HTS_CALLS_CONTRACT)),
-                tokenUpdate(FT_TOKEN)
-                        .supplyKey(CONTRACT_KEY)
-                        .payingWith(OWNER)
-                        .signedBy(OWNER, adminKey),
+                tokenUpdate(FT_TOKEN).supplyKey(CONTRACT_KEY).payingWith(OWNER).signedBy(OWNER, adminKey),
 
                 // Call the contract in atomic batch
                 sourcing(() -> atomicBatchDefaultOperator(
-                        contractCall(HTS_CALLS_CONTRACT,
-                                "mintTokenCall", asHeadlongAddress("0x" + "fe".repeat(20)),
-                                BigInteger.valueOf(10L),
-                                new byte[][]{})
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("callTokenMintContractInnerTxn"),
-                        transferMintedTokenInnerTxn)
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "mintTokenCall",
+                                                asHeadlongAddress("0x" + "fe".repeat(20)),
+                                                BigInteger.valueOf(10L),
+                                                new byte[][] {})
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("callTokenMintContractInnerTxn"),
+                                transferMintedTokenInnerTxn)
                         .payingWith(DEFAULT_BATCH_OPERATOR)
                         .via("atomicBatchTxn")
                         .hasKnownStatus(INNER_TRANSACTION_FAILED)),
@@ -1139,8 +1275,7 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                 childRecordsCheck(
                         "callTokenMintContractInnerTxn",
                         REVERTED_SUCCESS,
-                        recordWith()
-                                .status(INVALID_TOKEN_ID)),
+                        recordWith().status(INVALID_TOKEN_ID)),
 
                 // Assert the token is not minted
                 getTokenInfo(FT_TOKEN).hasTotalSupply(0L),
@@ -1159,7 +1294,7 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
 
         // Transfer token from treasury to receiver associated account
         final var transferMintedTokenInnerTxn = cryptoTransfer(
-                moving(1, FT_TOKEN).between(OWNER, RECEIVER_ASSOCIATED_FIRST))
+                        moving(1, FT_TOKEN).between(OWNER, RECEIVER_ASSOCIATED_FIRST))
                 .payingWith(OWNER)
                 .signedBy(OWNER)
                 .via("transferTokenInnerTxn");
@@ -1171,27 +1306,24 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                         FT_TOKEN, 0L, OWNER, adminKey, supplyKey, wipeKey, fungibleAddress),
                 tokenAssociate(RECEIVER_ASSOCIATED_FIRST, FT_TOKEN),
                 uploadInitCode(HTS_CALLS_CONTRACT),
-                contractCreate(HTS_CALLS_CONTRACT)
-                        .gas(GAS_TO_OFFER)
-                        .via("contractCreateTxn"),
+                contractCreate(HTS_CALLS_CONTRACT).gas(GAS_TO_OFFER).via("contractCreateTxn"),
 
                 // Make the contract the supply-key of the fungible token so that it can mint tokens
                 newKeyNamed(CONTRACT_KEY).shape(CONTRACT.signedWith(HTS_CALLS_CONTRACT)),
-                tokenUpdate(FT_TOKEN)
-                        .supplyKey(CONTRACT_KEY)
-                        .payingWith(OWNER)
-                        .signedBy(OWNER, adminKey),
+                tokenUpdate(FT_TOKEN).supplyKey(CONTRACT_KEY).payingWith(OWNER).signedBy(OWNER, adminKey),
 
                 // Call the contract in atomic batch with insufficient gas
                 sourcing(() -> atomicBatchDefaultOperator(
-                        contractCall(HTS_CALLS_CONTRACT,
-                                "mintTokenCall", fungibleAddress.get(),
-                                BigInteger.valueOf(10L),
-                                new byte[][]{})
-                                .payingWith(OWNER)
-                                .gas(500L) // Insufficient gas
-                                .via("callTokenMintContractInnerTxn"),
-                        transferMintedTokenInnerTxn)
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "mintTokenCall",
+                                                fungibleAddress.get(),
+                                                BigInteger.valueOf(10L),
+                                                new byte[][] {})
+                                        .payingWith(OWNER)
+                                        .gas(500L) // Insufficient gas
+                                        .via("callTokenMintContractInnerTxn"),
+                                transferMintedTokenInnerTxn)
                         .payingWith(DEFAULT_BATCH_OPERATOR)
                         .via("atomicBatchTxn")
                         .hasPrecheck(INSUFFICIENT_GAS)),
@@ -1224,7 +1356,8 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                         .exposingAddressTo(htsCallsAddress::set)
                         .via("mintContractCreateTxn"),
                 uploadInitCode(ASSOCIATE_CONTRACT),
-                contractCreate(ASSOCIATE_CONTRACT).gas(GAS_TO_OFFER)
+                contractCreate(ASSOCIATE_CONTRACT)
+                        .gas(GAS_TO_OFFER)
                         .exposingAddressTo(associateContractAddress::set)
                         .via("associateContractCreateTxn"),
 
@@ -1238,31 +1371,43 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
 
                 // Mint and Associate tokens to contract in atomic batch
                 sourcing(() -> atomicBatchDefaultOperator(
-                        // Update tokens treasury to be contract address
-                        tokenUpdate(FT_TOKEN)
-                                .treasury(HTS_CALLS_CONTRACT)
-                                .payingWith(OWNER)
-                                .signedBy(HTS_CALLS_CONTRACT, OWNER, adminKey)
-                                .via("updateFungibleTokenTreasuryToContractInnerTxn"),
-                        tokenUpdate(NON_FUNGIBLE_TOKEN)
-                                .treasury(HTS_CALLS_CONTRACT)
-                                .payingWith(OWNER)
-                                .signedBy(OWNER, adminKey)
-                                .via("updateNonFungibleTokenTreasuryToContractInnerTxn")
-                                .hasKnownStatus(INVALID_SIGNATURE),
-                        // Mint FT
-                        contractCall(HTS_CALLS_CONTRACT, "mintTokenCall", fungibleAddress.get(),
-                                BigInteger.valueOf(10L), new byte[][]{})
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("callFTTokenMintContractInnerTxn"),
-                        // Mint NFT
-                        contractCall(HTS_CALLS_CONTRACT, "mintTokenCall", nonFungibleAddress.get(),
-                                BigInteger.valueOf(0L),
-                                new byte[][]{"nft1".getBytes(), "nft2".getBytes(), "nft3".getBytes(), "nft4".getBytes()})
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("callNftMintContractInnerTxn"))
+                                // Update tokens treasury to be contract address
+                                tokenUpdate(FT_TOKEN)
+                                        .treasury(HTS_CALLS_CONTRACT)
+                                        .payingWith(OWNER)
+                                        .signedBy(HTS_CALLS_CONTRACT, OWNER, adminKey)
+                                        .via("updateFungibleTokenTreasuryToContractInnerTxn"),
+                                tokenUpdate(NON_FUNGIBLE_TOKEN)
+                                        .treasury(HTS_CALLS_CONTRACT)
+                                        .payingWith(OWNER)
+                                        .signedBy(OWNER, adminKey)
+                                        .via("updateNonFungibleTokenTreasuryToContractInnerTxn")
+                                        .hasKnownStatus(INVALID_SIGNATURE),
+                                // Mint FT
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "mintTokenCall",
+                                                fungibleAddress.get(),
+                                                BigInteger.valueOf(10L),
+                                                new byte[][] {})
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("callFTTokenMintContractInnerTxn"),
+                                // Mint NFT
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "mintTokenCall",
+                                                nonFungibleAddress.get(),
+                                                BigInteger.valueOf(0L),
+                                                new byte[][] {
+                                                    "nft1".getBytes(),
+                                                    "nft2".getBytes(),
+                                                    "nft3".getBytes(),
+                                                    "nft4".getBytes()
+                                                })
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("callNftMintContractInnerTxn"))
                         .payingWith(DEFAULT_BATCH_OPERATOR)
                         .via("atomicBatchTxn")
                         .hasKnownStatus(INNER_TRANSACTION_FAILED)),
@@ -1271,19 +1416,18 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                 getTokenInfo(FT_TOKEN).hasTotalSupply(0L),
                 getTokenInfo(NON_FUNGIBLE_TOKEN).hasTotalSupply(0L),
                 // Assert the owner account has no tokens
-                getAccountBalance(OWNER)
-                        .hasTokenBalance(FT_TOKEN, 0L)
-                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L),
+                getAccountBalance(OWNER).hasTokenBalance(FT_TOKEN, 0L).hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L),
                 // Assert the treasury contract has no tokens
                 getAccountBalance(HTS_CALLS_CONTRACT)
                         .hasTokenBalance(FT_TOKEN, 0L)
-                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L)
-        ));
+                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L)));
     }
 
     @HapiTest
-    @DisplayName("Update token treasury with contract, mint and associate tokens not signed by contract fails in atomic batch")
-    final Stream<DynamicTest> updateTokenTreasuryWithContractMintAndAssociateTokensNotSignedByContractFailsInAtomicBatch() {
+    @DisplayName(
+            "Update token treasury with contract, mint and associate tokens not signed by contract fails in atomic batch")
+    final Stream<DynamicTest>
+            updateTokenTreasuryWithContractMintAndAssociateTokensNotSignedByContractFailsInAtomicBatch() {
         final AtomicReference<Address> fungibleAddress = new AtomicReference<>();
         final AtomicReference<Address> nonFungibleAddress = new AtomicReference<>();
         final AtomicReference<Address> receiverAddressFirst = new AtomicReference<>();
@@ -1301,7 +1445,8 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                         .exposingAddressTo(htsCallsAddress::set)
                         .via("mintContractCreateTxn"),
                 uploadInitCode(ASSOCIATE_CONTRACT),
-                contractCreate(ASSOCIATE_CONTRACT).gas(GAS_TO_OFFER)
+                contractCreate(ASSOCIATE_CONTRACT)
+                        .gas(GAS_TO_OFFER)
                         .exposingAddressTo(associateContractAddress::set)
                         .via("associateContractCreateTxn"),
 
@@ -1315,41 +1460,56 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
 
                 // Mint and Associate tokens to contract in atomic batch
                 sourcing(() -> atomicBatchDefaultOperator(
-                        // Update tokens treasury to be contract address
-                        tokenUpdate(FT_TOKEN)
-                                .treasury(HTS_CALLS_CONTRACT)
-                                .payingWith(OWNER)
-                                .signedBy(OWNER, adminKey)
-                                .via("updateFungibleTokenTreasuryToContractInnerTxn")
-                                .hasKnownStatus(INVALID_SIGNATURE),
-                        tokenUpdate(NON_FUNGIBLE_TOKEN)
-                                .treasury(HTS_CALLS_CONTRACT)
-                                .payingWith(OWNER)
-                                .signedBy(HTS_CALLS_CONTRACT, OWNER, adminKey)
-                                .via("updateNonFungibleTokenTreasuryToContractInnerTxn"),
-                        // Mint FT
-                        contractCall(HTS_CALLS_CONTRACT, "mintTokenCall", fungibleAddress.get(),
-                                BigInteger.valueOf(10L), new byte[][]{})
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("callFTTokenMintContractInnerTxn"),
-                        // Mint NFT
-                        contractCall(HTS_CALLS_CONTRACT, "mintTokenCall", nonFungibleAddress.get(),
-                                BigInteger.valueOf(0L),
-                                new byte[][]{"nft1".getBytes(), "nft2".getBytes(), "nft3".getBytes(), "nft4".getBytes()})
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("callNftMintContractInnerTxn"),
-                        // Associate FT to the associate contract
-                        contractCall(ASSOCIATE_CONTRACT, "associateTokenToThisContract", fungibleAddress.get())
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("associateFungibleTokenContractInnerTxn"),
-                        // Associate NFT to the associate contract
-                        contractCall(ASSOCIATE_CONTRACT, "associateTokenToThisContract", nonFungibleAddress.get())
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("associateNonFungibleTokenContractInnerTxn"))
+                                // Update tokens treasury to be contract address
+                                tokenUpdate(FT_TOKEN)
+                                        .treasury(HTS_CALLS_CONTRACT)
+                                        .payingWith(OWNER)
+                                        .signedBy(OWNER, adminKey)
+                                        .via("updateFungibleTokenTreasuryToContractInnerTxn")
+                                        .hasKnownStatus(INVALID_SIGNATURE),
+                                tokenUpdate(NON_FUNGIBLE_TOKEN)
+                                        .treasury(HTS_CALLS_CONTRACT)
+                                        .payingWith(OWNER)
+                                        .signedBy(HTS_CALLS_CONTRACT, OWNER, adminKey)
+                                        .via("updateNonFungibleTokenTreasuryToContractInnerTxn"),
+                                // Mint FT
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "mintTokenCall",
+                                                fungibleAddress.get(),
+                                                BigInteger.valueOf(10L),
+                                                new byte[][] {})
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("callFTTokenMintContractInnerTxn"),
+                                // Mint NFT
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "mintTokenCall",
+                                                nonFungibleAddress.get(),
+                                                BigInteger.valueOf(0L),
+                                                new byte[][] {
+                                                    "nft1".getBytes(),
+                                                    "nft2".getBytes(),
+                                                    "nft3".getBytes(),
+                                                    "nft4".getBytes()
+                                                })
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("callNftMintContractInnerTxn"),
+                                // Associate FT to the associate contract
+                                contractCall(ASSOCIATE_CONTRACT, "associateTokenToThisContract", fungibleAddress.get())
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("associateFungibleTokenContractInnerTxn"),
+                                // Associate NFT to the associate contract
+                                contractCall(
+                                                ASSOCIATE_CONTRACT,
+                                                "associateTokenToThisContract",
+                                                nonFungibleAddress.get())
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("associateNonFungibleTokenContractInnerTxn"))
                         .payingWith(DEFAULT_BATCH_OPERATOR)
                         .via("atomicBatchTxn")
                         .hasKnownStatus(INNER_TRANSACTION_FAILED)),
@@ -1358,9 +1518,7 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                 getTokenInfo(FT_TOKEN).hasTotalSupply(0L),
                 getTokenInfo(NON_FUNGIBLE_TOKEN).hasTotalSupply(0L),
                 // Assert the owner account has no tokens
-                getAccountBalance(OWNER)
-                        .hasTokenBalance(FT_TOKEN, 0L)
-                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L),
+                getAccountBalance(OWNER).hasTokenBalance(FT_TOKEN, 0L).hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L),
                 // Assert the receiver associated account does not have tokens and is not associated with them
                 getAccountBalance(ASSOCIATE_CONTRACT)
                         .hasTokenBalance(FT_TOKEN, 0L)
@@ -1371,13 +1529,12 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                 // Assert the treasury contract has no tokens
                 getAccountBalance(HTS_CALLS_CONTRACT)
                         .hasTokenBalance(FT_TOKEN, 0L)
-                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L)
-        ));
+                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L)));
     }
 
     @HapiTest
-    @DisplayName("Update token treasury with contract with maxAutoAssociations = 0, associate contract and mint" +
-            " fails in atomic batch")
+    @DisplayName("Update token treasury with contract with maxAutoAssociations = 0, associate contract and mint"
+            + " fails in atomic batch")
     final Stream<DynamicTest> updateTokenTreasuryWithContractAssociateAndMintFailsInAtomicBatch() {
         final AtomicReference<Address> fungibleAddress = new AtomicReference<>();
         final AtomicReference<Address> nonFungibleAddress = new AtomicReference<>();
@@ -1395,7 +1552,8 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                         .exposingAddressTo(htsCallsAddress::set)
                         .via("mintContractCreateTxn"),
                 uploadInitCode(ASSOCIATE_CONTRACT),
-                contractCreate(ASSOCIATE_CONTRACT).gas(GAS_TO_OFFER)
+                contractCreate(ASSOCIATE_CONTRACT)
+                        .gas(GAS_TO_OFFER)
                         .exposingAddressTo(associateContractAddress::set)
                         .via("associateContractCreateTxn"),
 
@@ -1409,41 +1567,56 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
 
                 // Mint and Associate tokens to contract in atomic batch
                 sourcing(() -> atomicBatchDefaultOperator(
-                        // Update tokens treasury to be contract address
-                        tokenUpdate(FT_TOKEN)
-                                .treasury(HTS_CALLS_CONTRACT)
-                                .payingWith(OWNER)
-                                .signedBy(HTS_CALLS_CONTRACT, OWNER, adminKey)
-                                .via("updateFungibleTokenTreasuryToContractInnerTxn")
-                                .hasKnownStatus(NO_REMAINING_AUTOMATIC_ASSOCIATIONS),
-                        tokenUpdate(NON_FUNGIBLE_TOKEN)
-                                .treasury(HTS_CALLS_CONTRACT)
-                                .payingWith(OWNER)
-                                .signedBy(HTS_CALLS_CONTRACT, OWNER, adminKey)
-                                .via("updateNonFungibleTokenTreasuryToContractInnerTxn"),
-                        // Mint FT
-                        contractCall(HTS_CALLS_CONTRACT, "mintTokenCall", fungibleAddress.get(),
-                                BigInteger.valueOf(10L), new byte[][]{})
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("callFTTokenMintContractInnerTxn"),
-                        // Mint NFT
-                        contractCall(HTS_CALLS_CONTRACT, "mintTokenCall", nonFungibleAddress.get(),
-                                BigInteger.valueOf(0L),
-                                new byte[][]{"nft1".getBytes(), "nft2".getBytes(), "nft3".getBytes(), "nft4".getBytes()})
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("callNftMintContractInnerTxn"),
-                        // Associate FT to the associate contract
-                        contractCall(ASSOCIATE_CONTRACT, "associateTokenToThisContract", fungibleAddress.get())
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("associateFungibleTokenContractInnerTxn"),
-                        // Associate NFT to the associate contract
-                        contractCall(ASSOCIATE_CONTRACT, "associateTokenToThisContract", nonFungibleAddress.get())
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("associateNonFungibleTokenContractInnerTxn"))
+                                // Update tokens treasury to be contract address
+                                tokenUpdate(FT_TOKEN)
+                                        .treasury(HTS_CALLS_CONTRACT)
+                                        .payingWith(OWNER)
+                                        .signedBy(HTS_CALLS_CONTRACT, OWNER, adminKey)
+                                        .via("updateFungibleTokenTreasuryToContractInnerTxn")
+                                        .hasKnownStatus(NO_REMAINING_AUTOMATIC_ASSOCIATIONS),
+                                tokenUpdate(NON_FUNGIBLE_TOKEN)
+                                        .treasury(HTS_CALLS_CONTRACT)
+                                        .payingWith(OWNER)
+                                        .signedBy(HTS_CALLS_CONTRACT, OWNER, adminKey)
+                                        .via("updateNonFungibleTokenTreasuryToContractInnerTxn"),
+                                // Mint FT
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "mintTokenCall",
+                                                fungibleAddress.get(),
+                                                BigInteger.valueOf(10L),
+                                                new byte[][] {})
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("callFTTokenMintContractInnerTxn"),
+                                // Mint NFT
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "mintTokenCall",
+                                                nonFungibleAddress.get(),
+                                                BigInteger.valueOf(0L),
+                                                new byte[][] {
+                                                    "nft1".getBytes(),
+                                                    "nft2".getBytes(),
+                                                    "nft3".getBytes(),
+                                                    "nft4".getBytes()
+                                                })
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("callNftMintContractInnerTxn"),
+                                // Associate FT to the associate contract
+                                contractCall(ASSOCIATE_CONTRACT, "associateTokenToThisContract", fungibleAddress.get())
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("associateFungibleTokenContractInnerTxn"),
+                                // Associate NFT to the associate contract
+                                contractCall(
+                                                ASSOCIATE_CONTRACT,
+                                                "associateTokenToThisContract",
+                                                nonFungibleAddress.get())
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("associateNonFungibleTokenContractInnerTxn"))
                         .payingWith(DEFAULT_BATCH_OPERATOR)
                         .via("atomicBatchTxn")
                         .hasKnownStatus(INNER_TRANSACTION_FAILED)),
@@ -1452,9 +1625,7 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                 getTokenInfo(FT_TOKEN).hasTotalSupply(0L),
                 getTokenInfo(NON_FUNGIBLE_TOKEN).hasTotalSupply(0L),
                 // Assert the owner account has the token
-                getAccountBalance(OWNER)
-                        .hasTokenBalance(FT_TOKEN, 0L)
-                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L),
+                getAccountBalance(OWNER).hasTokenBalance(FT_TOKEN, 0L).hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L),
                 // Assert the receiver associated account has no token relationship
                 getAccountInfo(ASSOCIATE_CONTRACT)
                         .hasNoTokenRelationship(FT_TOKEN)
@@ -1462,8 +1633,7 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                 // Assert the treasury contract has no tokens
                 getAccountBalance(HTS_CALLS_CONTRACT)
                         .hasTokenBalance(FT_TOKEN, 0L)
-                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L)
-        ));
+                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L)));
     }
 
     @HapiTest
@@ -1479,11 +1649,13 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                 // Create accounts, keys and tokens, create contracts and upload their init codes
                 createAccountsAndKeys(receiverAddressFirst, receiverAddressSecond),
                 uploadInitCode(HTS_CALLS_CONTRACT),
-                contractCreate(HTS_CALLS_CONTRACT).gas(GAS_TO_OFFER)
+                contractCreate(HTS_CALLS_CONTRACT)
+                        .gas(GAS_TO_OFFER)
                         .exposingAddressTo(htsCallsAddress::set)
                         .via("mintContractCreateTxn"),
                 uploadInitCode(ASSOCIATE_CONTRACT),
-                contractCreate(ASSOCIATE_CONTRACT).gas(GAS_TO_OFFER)
+                contractCreate(ASSOCIATE_CONTRACT)
+                        .gas(GAS_TO_OFFER)
                         .exposingAddressTo(associateContractAddress::set)
                         .via("associateContractCreateTxn"),
 
@@ -1495,29 +1667,37 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
 
                 // Mint, Associate, Burn and Transfer burned tokens to contract in atomic batch
                 sourcing(() -> atomicBatchDefaultOperator(
-                        // Mint FT
-                        contractCall(HTS_CALLS_CONTRACT, "mintTokenCall", fungibleAddress.get(),
-                                BigInteger.valueOf(10L), new byte[][]{})
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("callFTTokenMintContractInnerTxn"),
-                        // Associate FT to the associate contract
-                        contractCall(ASSOCIATE_CONTRACT, "associateTokenToThisContract", fungibleAddress.get())
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("associateFungibleTokenContractInnerTxn"),
-                        // Burn FT with contract call
-                        contractCall(HTS_CALLS_CONTRACT, "burnTokenCall", fungibleAddress.get(),
-                                BigInteger.valueOf(10L), new long[]{})
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("callFtBurnContractInnerTxn"),
-                        // Transfer FT to contract with crypto transfer
-                        cryptoTransfer(moving(5, FT_TOKEN).between(OWNER, ASSOCIATE_CONTRACT))
-                                .payingWith(OWNER)
-                                .signedBy(OWNER)
-                                .via("transferFungibleTokenToContractInnerTxn")
-                                .hasKnownStatus(INSUFFICIENT_TOKEN_BALANCE))
+                                // Mint FT
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "mintTokenCall",
+                                                fungibleAddress.get(),
+                                                BigInteger.valueOf(10L),
+                                                new byte[][] {})
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("callFTTokenMintContractInnerTxn"),
+                                // Associate FT to the associate contract
+                                contractCall(ASSOCIATE_CONTRACT, "associateTokenToThisContract", fungibleAddress.get())
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("associateFungibleTokenContractInnerTxn"),
+                                // Burn FT with contract call
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "burnTokenCall",
+                                                fungibleAddress.get(),
+                                                BigInteger.valueOf(10L),
+                                                new long[] {})
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("callFtBurnContractInnerTxn"),
+                                // Transfer FT to contract with crypto transfer
+                                cryptoTransfer(moving(5, FT_TOKEN).between(OWNER, ASSOCIATE_CONTRACT))
+                                        .payingWith(OWNER)
+                                        .signedBy(OWNER)
+                                        .via("transferFungibleTokenToContractInnerTxn")
+                                        .hasKnownStatus(INSUFFICIENT_TOKEN_BALANCE))
                         .payingWith(DEFAULT_BATCH_OPERATOR)
                         .via("atomicBatchTxn")
                         .hasKnownStatus(INNER_TRANSACTION_FAILED)),
@@ -1525,12 +1705,9 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                 // Assert the tokens supply is updated correctly
                 getTokenInfo(FT_TOKEN).hasTotalSupply(0L),
                 // Assert the owner account has the token
-                getAccountBalance(OWNER)
-                        .hasTokenBalance(FT_TOKEN, 0L),
+                getAccountBalance(OWNER).hasTokenBalance(FT_TOKEN, 0L),
                 // Assert the receiver associated account has no token relationship
-                getAccountInfo(ASSOCIATE_CONTRACT)
-                        .hasNoTokenRelationship(FT_TOKEN)
-        ));
+                getAccountInfo(ASSOCIATE_CONTRACT).hasNoTokenRelationship(FT_TOKEN)));
     }
 
     @HapiTest
@@ -1546,45 +1723,67 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                 // Create accounts, keys and tokens, create contracts and upload their init codes
                 createAccountsAndKeys(receiverAddressFirst, receiverAddressSecond),
                 uploadInitCode(HTS_CALLS_CONTRACT),
-                contractCreate(HTS_CALLS_CONTRACT).gas(GAS_TO_OFFER)
+                contractCreate(HTS_CALLS_CONTRACT)
+                        .gas(GAS_TO_OFFER)
                         .exposingAddressTo(htsCallsAddress::set)
                         .via("mintContractCreateTxn"),
                 uploadInitCode(ASSOCIATE_CONTRACT),
-                contractCreate(ASSOCIATE_CONTRACT).gas(GAS_TO_OFFER)
+                contractCreate(ASSOCIATE_CONTRACT)
+                        .gas(GAS_TO_OFFER)
                         .exposingAddressTo(associateContractAddress::set)
                         .via("associateContractCreateTxn"),
 
                 // Use the contract as the supplyKey for minting
                 newKeyNamed(CONTRACT_KEY).shape(CONTRACT.signedWith(HTS_CALLS_CONTRACT)),
                 createNonFungibleTokenWithAdminKeyAndSaveAddress(
-                        NON_FUNGIBLE_TOKEN, 0L, HTS_CALLS_CONTRACT, adminKey, CONTRACT_KEY, CONTRACT_KEY, nonFungibleAddress),
+                        NON_FUNGIBLE_TOKEN,
+                        0L,
+                        HTS_CALLS_CONTRACT,
+                        adminKey,
+                        CONTRACT_KEY,
+                        CONTRACT_KEY,
+                        nonFungibleAddress),
                 tokenAssociate(RECEIVER_ASSOCIATED_FIRST, NON_FUNGIBLE_TOKEN),
 
                 // Mint, Associate, Burn and Transfer burned tokens to contract in atomic batch
                 sourcing(() -> atomicBatchDefaultOperator(
-                        // Mint NFT
-                        contractCall(HTS_CALLS_CONTRACT, "mintTokenCall", nonFungibleAddress.get(),
-                                BigInteger.valueOf(0L),
-                                new byte[][]{"nft1".getBytes(), "nft2".getBytes(), "nft3".getBytes(), "nft4".getBytes()})
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("callNftMintContractInnerTxn"),
-                        // Associate NFT to the associate contract
-                        contractCall(ASSOCIATE_CONTRACT, "associateTokenToThisContract", nonFungibleAddress.get())
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("associateNonFungibleTokenContractInnerTxn"),
-                        // Burn NFT with contract call
-                        contractCall(HTS_CALLS_CONTRACT, "burnTokenCall", nonFungibleAddress.get(),
-                                BigInteger.ZERO,
-                                new long[]{1L, 2L, 3L, 4L})
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("callNftBurnContractInnerTxn"),
-                        // Transfer NFT to contract
-                        cryptoTransfer(movingUnique(NON_FUNGIBLE_TOKEN, 1L)
-                                .between(HTS_CALLS_CONTRACT, ASSOCIATE_CONTRACT))
-                                .hasKnownStatus(INVALID_NFT_ID))
+                                // Mint NFT
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "mintTokenCall",
+                                                nonFungibleAddress.get(),
+                                                BigInteger.valueOf(0L),
+                                                new byte[][] {
+                                                    "nft1".getBytes(),
+                                                    "nft2".getBytes(),
+                                                    "nft3".getBytes(),
+                                                    "nft4".getBytes()
+                                                })
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("callNftMintContractInnerTxn"),
+                                // Associate NFT to the associate contract
+                                contractCall(
+                                                ASSOCIATE_CONTRACT,
+                                                "associateTokenToThisContract",
+                                                nonFungibleAddress.get())
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("associateNonFungibleTokenContractInnerTxn"),
+                                // Burn NFT with contract call
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "burnTokenCall",
+                                                nonFungibleAddress.get(),
+                                                BigInteger.ZERO,
+                                                new long[] {1L, 2L, 3L, 4L})
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("callNftBurnContractInnerTxn"),
+                                // Transfer NFT to contract
+                                cryptoTransfer(movingUnique(NON_FUNGIBLE_TOKEN, 1L)
+                                                .between(HTS_CALLS_CONTRACT, ASSOCIATE_CONTRACT))
+                                        .hasKnownStatus(INVALID_NFT_ID))
                         .payingWith(DEFAULT_BATCH_OPERATOR)
                         .via("atomicBatchTxn")
                         .hasKnownStatus(INNER_TRANSACTION_FAILED)),
@@ -1592,15 +1791,11 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                 // Assert the token is not minted
                 getTokenInfo(NON_FUNGIBLE_TOKEN).hasTotalSupply(0L),
                 // Assert the owner account has the token
-                getAccountBalance(OWNER)
-                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L),
+                getAccountBalance(OWNER).hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L),
                 // Assert the contract has no token
-                getAccountBalance(HTS_CALLS_CONTRACT)
-                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L),
+                getAccountBalance(HTS_CALLS_CONTRACT).hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L),
                 // Assert the receiver associated account has no token relationship
-                getAccountInfo(ASSOCIATE_CONTRACT)
-                        .hasNoTokenRelationship(NON_FUNGIBLE_TOKEN)
-        ));
+                getAccountInfo(ASSOCIATE_CONTRACT).hasNoTokenRelationship(NON_FUNGIBLE_TOKEN)));
     }
 
     @HapiTest
@@ -1624,24 +1819,37 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                 // Use the contract as the supplyKey for minting
                 newKeyNamed(CONTRACT_KEY).shape(CONTRACT.signedWith(HTS_CALLS_CONTRACT)),
                 createNonFungibleTokenWithAdminKeyAndSaveAddress(
-                        NON_FUNGIBLE_TOKEN, 0L, HTS_CALLS_CONTRACT, adminKey, CONTRACT_KEY, CONTRACT_KEY, nonFungibleAddress),
+                        NON_FUNGIBLE_TOKEN,
+                        0L,
+                        HTS_CALLS_CONTRACT,
+                        adminKey,
+                        CONTRACT_KEY,
+                        CONTRACT_KEY,
+                        nonFungibleAddress),
 
                 // Mint, Associate and Transfer NFT tokens from treasury to the same treasury contract in atomic batch
                 sourcing(() -> atomicBatchDefaultOperator(
-                        // Mint NFT
-                        contractCall(HTS_CALLS_CONTRACT, "mintTokenCall", nonFungibleAddress.get(),
-                                BigInteger.valueOf(0L),
-                                new byte[][]{"nft1".getBytes()})
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("callNftMintContractInnerTxn"),
-                        // Transfer NFT from treasury contract to the same treasury contract
-                        contractCall(HTS_CALLS_CONTRACT, "transferNFTCall",
-                                nonFungibleAddress.get(), htsCallsAddress.get(),
-                                htsCallsAddress.get(), 1L)
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("transferNftToContractInnerTxn"))
+                                // Mint NFT
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "mintTokenCall",
+                                                nonFungibleAddress.get(),
+                                                BigInteger.valueOf(0L),
+                                                new byte[][] {"nft1".getBytes()})
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("callNftMintContractInnerTxn"),
+                                // Transfer NFT from treasury contract to the same treasury contract
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "transferNFTCall",
+                                                nonFungibleAddress.get(),
+                                                htsCallsAddress.get(),
+                                                htsCallsAddress.get(),
+                                                1L)
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("transferNftToContractInnerTxn"))
                         .payingWith(DEFAULT_BATCH_OPERATOR)
                         .via("atomicBatchTxn")
                         .hasKnownStatus(SUCCESS)),
@@ -1651,22 +1859,19 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                 childRecordsCheck(
                         "transferNftToContractInnerTxn",
                         SUCCESS,
-                        recordWith()
-                                .status(ACCOUNT_REPEATED_IN_ACCOUNT_AMOUNTS)),
+                        recordWith().status(ACCOUNT_REPEATED_IN_ACCOUNT_AMOUNTS)),
 
                 // Assert the token supply is updated correctly
                 getTokenInfo(NON_FUNGIBLE_TOKEN).hasTotalSupply(1L),
                 // Assert the owner account has no token
-                getAccountBalance(OWNER)
-                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L),
+                getAccountBalance(OWNER).hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L),
                 // Assert the treasury contract has the token
-                getAccountBalance(HTS_CALLS_CONTRACT)
-                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 1L)));
+                getAccountBalance(HTS_CALLS_CONTRACT).hasTokenBalance(NON_FUNGIBLE_TOKEN, 1L)));
     }
 
     @HapiTest
-    @DisplayName("Call contract for NFT tokens mint, mint and transfer token from contract that is not treasury to" +
-            " EOA fails in atomic batch")
+    @DisplayName("Call contract for NFT tokens mint, mint and transfer token from contract that is not treasury to"
+            + " EOA fails in atomic batch")
     final Stream<DynamicTest> callContractsForNFTMintAndTransferFromContractThatIsNotTreasuryToEOAFailsInAtomicBatch() {
         final AtomicReference<Address> nonFungibleAddress = new AtomicReference<>();
         final AtomicReference<Address> receiverAddressFirst = new AtomicReference<>();
@@ -1692,20 +1897,27 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
 
                 // Mint, Associate and Transfer NFT tokens from treasury to the same treasury contract in atomic batch
                 sourcing(() -> atomicBatchDefaultOperator(
-                        // Mint NFT
-                        contractCall(HTS_CALLS_CONTRACT, "mintTokenCall", nonFungibleAddress.get(),
-                                BigInteger.valueOf(0L),
-                                new byte[][]{"nft1".getBytes()})
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("callNftMintContractInnerTxn"),
-                        // Transfer NFT from non-treasury contract to EOA
-                        contractCall(HTS_CALLS_CONTRACT, "transferNFTCall",
-                                nonFungibleAddress.get(), htsCallsAddress.get(),
-                                receiverAddressFirst.get(), 1L)
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("transferNftToContractInnerTxn"))
+                                // Mint NFT
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "mintTokenCall",
+                                                nonFungibleAddress.get(),
+                                                BigInteger.valueOf(0L),
+                                                new byte[][] {"nft1".getBytes()})
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("callNftMintContractInnerTxn"),
+                                // Transfer NFT from non-treasury contract to EOA
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "transferNFTCall",
+                                                nonFungibleAddress.get(),
+                                                htsCallsAddress.get(),
+                                                receiverAddressFirst.get(),
+                                                1L)
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("transferNftToContractInnerTxn"))
                         .payingWith(DEFAULT_BATCH_OPERATOR)
                         .via("atomicBatchTxn")
                         .hasKnownStatus(SUCCESS)),
@@ -1715,26 +1927,23 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                 childRecordsCheck(
                         "transferNftToContractInnerTxn",
                         SUCCESS,
-                        recordWith()
-                                .status(SENDER_DOES_NOT_OWN_NFT_SERIAL_NO)),
+                        recordWith().status(SENDER_DOES_NOT_OWN_NFT_SERIAL_NO)),
 
                 // Assert the token supply is updated correctly
                 getTokenInfo(NON_FUNGIBLE_TOKEN).hasTotalSupply(1L),
                 // Assert the owner account has the token
-                getAccountBalance(OWNER)
-                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 1L),
+                getAccountBalance(OWNER).hasTokenBalance(NON_FUNGIBLE_TOKEN, 1L),
                 // Assert the contract has no token
-                getAccountBalance(HTS_CALLS_CONTRACT)
-                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L),
+                getAccountBalance(HTS_CALLS_CONTRACT).hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L),
                 // Assert the first receiver account has no token
-                getAccountBalance(RECEIVER_ASSOCIATED_FIRST)
-                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L)));
+                getAccountBalance(RECEIVER_ASSOCIATED_FIRST).hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L)));
     }
 
     @HapiTest
-    @DisplayName("Call contract for NFT tokens mint and transfer to accounts with insufficient token" +
-            " balance fails in atomic batch")
-    final Stream<DynamicTest> callContractForNFTMintAndTransferFromContractWithInsufficientTokenBalanceFailsInAtomicBatch() {
+    @DisplayName("Call contract for NFT tokens mint and transfer to accounts with insufficient token"
+            + " balance fails in atomic batch")
+    final Stream<DynamicTest>
+            callContractForNFTMintAndTransferFromContractWithInsufficientTokenBalanceFailsInAtomicBatch() {
         final AtomicReference<Address> nonFungibleAddress = new AtomicReference<>();
         final AtomicReference<Address> receiverAddressFirst = new AtomicReference<>();
         final AtomicReference<Address> receiverAddressSecond = new AtomicReference<>();
@@ -1753,33 +1962,50 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                 // Use the contract as the supplyKey for minting
                 newKeyNamed(CONTRACT_KEY).shape(CONTRACT.signedWith(HTS_CALLS_CONTRACT)),
                 createNonFungibleTokenWithAdminKeyAndSaveAddress(
-                        NON_FUNGIBLE_TOKEN, 0L, HTS_CALLS_CONTRACT, adminKey, CONTRACT_KEY, CONTRACT_KEY, nonFungibleAddress),
+                        NON_FUNGIBLE_TOKEN,
+                        0L,
+                        HTS_CALLS_CONTRACT,
+                        adminKey,
+                        CONTRACT_KEY,
+                        CONTRACT_KEY,
+                        nonFungibleAddress),
                 tokenAssociate(RECEIVER_ASSOCIATED_FIRST, NON_FUNGIBLE_TOKEN),
                 tokenAssociate(RECEIVER_ASSOCIATED_SECOND, NON_FUNGIBLE_TOKEN),
 
                 // Mint and Transfer NFT tokens to accounts with unsufficient token balance in atomic batch
                 sourcing(() -> atomicBatchDefaultOperator(
-                        // Mint NFT
-                        contractCall(HTS_CALLS_CONTRACT, "mintTokenCall", nonFungibleAddress.get(),
-                                BigInteger.valueOf(0L),
-                                new byte[][]{"nft1".getBytes()})
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("callNftMintContractInnerTxn"),
-                        // transfer from treasury contract to first EOA
-                        contractCall(HTS_CALLS_CONTRACT, "transferNFTCall",
-                                nonFungibleAddress.get(), htsCallsAddress.get(),
-                                receiverAddressFirst.get(), 1L)
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("transferNftToContractInnerTxnFirst"),
-                        // transfer from treasury contract to second EOA
-                        contractCall(HTS_CALLS_CONTRACT, "transferNFTCall",
-                                nonFungibleAddress.get(), htsCallsAddress.get(),
-                                receiverAddressSecond.get(), 1L)
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("transferNftToContractInnerTxnSecond"))
+                                // Mint NFT
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "mintTokenCall",
+                                                nonFungibleAddress.get(),
+                                                BigInteger.valueOf(0L),
+                                                new byte[][] {"nft1".getBytes()})
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("callNftMintContractInnerTxn"),
+                                // transfer from treasury contract to first EOA
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "transferNFTCall",
+                                                nonFungibleAddress.get(),
+                                                htsCallsAddress.get(),
+                                                receiverAddressFirst.get(),
+                                                1L)
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("transferNftToContractInnerTxnFirst"),
+                                // transfer from treasury contract to second EOA
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "transferNFTCall",
+                                                nonFungibleAddress.get(),
+                                                htsCallsAddress.get(),
+                                                receiverAddressSecond.get(),
+                                                1L)
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("transferNftToContractInnerTxnSecond"))
                         .payingWith(DEFAULT_BATCH_OPERATOR)
                         .via("atomicBatchTxn")
                         .hasKnownStatus(SUCCESS)),
@@ -1789,23 +2015,18 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                 childRecordsCheck(
                         "transferNftToContractInnerTxnSecond",
                         SUCCESS,
-                        recordWith()
-                                .status(SENDER_DOES_NOT_OWN_NFT_SERIAL_NO)),
+                        recordWith().status(SENDER_DOES_NOT_OWN_NFT_SERIAL_NO)),
 
                 // Assert the tokens supply is updated correctly
                 getTokenInfo(NON_FUNGIBLE_TOKEN).hasTotalSupply(1L),
                 // Assert the owner account has no token
-                getAccountBalance(OWNER)
-                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L),
+                getAccountBalance(OWNER).hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L),
                 // Assert the treasury contract has no remaining tokens
-                getAccountBalance(HTS_CALLS_CONTRACT)
-                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L),
+                getAccountBalance(HTS_CALLS_CONTRACT).hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L),
                 // Assert the first receiver account has token
-                getAccountBalance(RECEIVER_ASSOCIATED_FIRST)
-                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 1L),
+                getAccountBalance(RECEIVER_ASSOCIATED_FIRST).hasTokenBalance(NON_FUNGIBLE_TOKEN, 1L),
                 // Assert the second receiver account has no token
-                getAccountBalance(RECEIVER_ASSOCIATED_SECOND)
-                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L)));
+                getAccountBalance(RECEIVER_ASSOCIATED_SECOND).hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L)));
     }
 
     @HapiTest
@@ -1829,25 +2050,38 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                 // Use the contract as the treasury but not as the supplyKey for minting
                 newKeyNamed(CONTRACT_KEY).shape(CONTRACT.signedWith(HTS_CALLS_CONTRACT)),
                 createNonFungibleTokenWithAdminKeyAndSaveAddress(
-                        NON_FUNGIBLE_TOKEN, 0L, HTS_CALLS_CONTRACT, adminKey, supplyKey, CONTRACT_KEY, nonFungibleAddress),
+                        NON_FUNGIBLE_TOKEN,
+                        0L,
+                        HTS_CALLS_CONTRACT,
+                        adminKey,
+                        supplyKey,
+                        CONTRACT_KEY,
+                        nonFungibleAddress),
                 tokenAssociate(RECEIVER_ASSOCIATED_FIRST, NON_FUNGIBLE_TOKEN),
 
                 // Mint and Transfer NFT tokens in atomic batch
                 sourcing(() -> atomicBatchDefaultOperator(
-                        // Mint NFT
-                        contractCall(HTS_CALLS_CONTRACT, "mintTokenCall", nonFungibleAddress.get(),
-                                BigInteger.valueOf(0L),
-                                new byte[][]{"nft1".getBytes()})
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("callNftMintContractInnerTxn"),
-                        // transfer from treasury contract to first EOA
-                        contractCall(HTS_CALLS_CONTRACT, "transferNFTCall",
-                                nonFungibleAddress.get(), htsCallsAddress.get(),
-                                receiverAddressFirst.get(), 1L)
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("transferNftToContractInnerTxn"))
+                                // Mint NFT
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "mintTokenCall",
+                                                nonFungibleAddress.get(),
+                                                BigInteger.valueOf(0L),
+                                                new byte[][] {"nft1".getBytes()})
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("callNftMintContractInnerTxn"),
+                                // transfer from treasury contract to first EOA
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "transferNFTCall",
+                                                nonFungibleAddress.get(),
+                                                htsCallsAddress.get(),
+                                                receiverAddressFirst.get(),
+                                                1L)
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("transferNftToContractInnerTxn"))
                         .payingWith(DEFAULT_BATCH_OPERATOR)
                         .via("atomicBatchTxn")
                         .hasKnownStatus(SUCCESS)),
@@ -1855,29 +2089,23 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                 // The contract does not revert and the batch succeeds but the child transaction fails
                 // Assert the child transaction record exposes the error code
                 childRecordsCheck(
-                        "transferNftToContractInnerTxn",
-                        SUCCESS,
-                        recordWith()
-                                .status(INVALID_NFT_ID)),
+                        "transferNftToContractInnerTxn", SUCCESS, recordWith().status(INVALID_NFT_ID)),
 
                 // Assert the token is not minted
                 getTokenInfo(NON_FUNGIBLE_TOKEN).hasTotalSupply(0L),
                 // Assert the owner account has no token
-                getAccountBalance(OWNER)
-                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L),
+                getAccountBalance(OWNER).hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L),
                 // Assert the treasury contract has no tokens
-                getAccountBalance(HTS_CALLS_CONTRACT)
-                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L),
+                getAccountBalance(HTS_CALLS_CONTRACT).hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L),
                 // Assert the receiver associated account has no token
-                getAccountBalance(RECEIVER_ASSOCIATED_FIRST)
-                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L)));
+                getAccountBalance(RECEIVER_ASSOCIATED_FIRST).hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L)));
     }
 
     // Contract tries to burn tokens it is not treasury for fails
     // !!!!! The tokens actually got burned, but the contract is not the treasury!!!!!!!!!!!!
     @HapiTest
-    @DisplayName("Call contract for NFT tokens mint, edit supply key and burn with contract that is not supply key" +
-            " fails in atomic batch")
+    @DisplayName("Call contract for NFT tokens mint, edit supply key and burn with contract that is not supply key"
+            + " fails in atomic batch")
     final Stream<DynamicTest> callContractForNFTMintAndBurnFromContractThatIsNotSupplyKeyFailsInAtomicBatch() {
         final AtomicReference<Address> nonFungibleAddress = new AtomicReference<>();
         final AtomicReference<Address> receiverAddressFirst = new AtomicReference<>();
@@ -1901,23 +2129,29 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
 
                 // Mint and BURN NFT tokens from contract that is the supply key but is not the treasury in atomic batch
                 sourcing(() -> atomicBatchDefaultOperator(
-                        // Mint NFT
-                        contractCall(HTS_CALLS_CONTRACT, "mintTokenCall", nonFungibleAddress.get(),
-                                BigInteger.valueOf(0L),
-                                new byte[][]{"nft1".getBytes(), "nft2".getBytes()})
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("callNftMintContractInnerTxn"),
-                        tokenUpdate(NON_FUNGIBLE_TOKEN)
-                                .supplyKey(supplyKey)
-                                .payingWith(OWNER)
-                                .signedBy(OWNER, adminKey, supplyKey, CONTRACT_KEY),
-                        contractCall(HTS_CALLS_CONTRACT, "burnTokenCall", nonFungibleAddress.get(),
-                                BigInteger.ZERO,
-                                new long[]{1L})
-                                .payingWith(OWNER)
-                                .gas(GAS_TO_OFFER)
-                                .via("callNftBurnContractInnerTxn"))
+                                // Mint NFT
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "mintTokenCall",
+                                                nonFungibleAddress.get(),
+                                                BigInteger.valueOf(0L),
+                                                new byte[][] {"nft1".getBytes(), "nft2".getBytes()})
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("callNftMintContractInnerTxn"),
+                                tokenUpdate(NON_FUNGIBLE_TOKEN)
+                                        .supplyKey(supplyKey)
+                                        .payingWith(OWNER)
+                                        .signedBy(OWNER, adminKey, supplyKey, CONTRACT_KEY),
+                                contractCall(
+                                                HTS_CALLS_CONTRACT,
+                                                "burnTokenCall",
+                                                nonFungibleAddress.get(),
+                                                BigInteger.ZERO,
+                                                new long[] {1L})
+                                        .payingWith(OWNER)
+                                        .gas(GAS_TO_OFFER)
+                                        .via("callNftBurnContractInnerTxn"))
                         .payingWith(DEFAULT_BATCH_OPERATOR)
                         .via("atomicBatchTxn")
                         .hasKnownStatus(SUCCESS)),
@@ -1927,30 +2161,33 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                 childRecordsCheck(
                         "callNftBurnContractInnerTxn",
                         SUCCESS,
-                        recordWith()
-                                .status(INVALID_FULL_PREFIX_SIGNATURE_FOR_PRECOMPILE)),
+                        recordWith().status(INVALID_FULL_PREFIX_SIGNATURE_FOR_PRECOMPILE)),
 
                 // Assert the token is not minted
                 getTokenInfo(NON_FUNGIBLE_TOKEN).hasTotalSupply(2L),
                 // Assert the owner account has no token
-                getAccountBalance(OWNER)
-                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 2L),
+                getAccountBalance(OWNER).hasTokenBalance(NON_FUNGIBLE_TOKEN, 2L),
                 // Assert the treasury contract has remaining tokens
-                getAccountBalance(HTS_CALLS_CONTRACT)
-                        .hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L)));
+                getAccountBalance(HTS_CALLS_CONTRACT).hasTokenBalance(NON_FUNGIBLE_TOKEN, 0L)));
     }
 
     /* --------------- Helper methods --------------- */
 
     private HapiAtomicBatch atomicBatchDefaultOperator(HapiTxnOp<?>... ops) {
         return atomicBatch(Arrays.stream(ops)
-                .map(op -> op.batchKey(DEFAULT_BATCH_OPERATOR))
-                .toArray(HapiTxnOp[]::new))
+                        .map(op -> op.batchKey(DEFAULT_BATCH_OPERATOR))
+                        .toArray(HapiTxnOp[]::new))
                 .payingWith(DEFAULT_BATCH_OPERATOR);
     }
 
     private HapiTokenCreate createFungibleTokenWithAdminKeyAndSaveAddress(
-            String tokenName, long supply, String treasury, String adminKey, String supplyKey, String wipeKey, AtomicReference<Address> fungibleAddress) {
+            String tokenName,
+            long supply,
+            String treasury,
+            String adminKey,
+            String supplyKey,
+            String wipeKey,
+            AtomicReference<Address> fungibleAddress) {
         return tokenCreate(tokenName)
                 .initialSupply(supply)
                 .treasury(treasury)
@@ -1962,7 +2199,13 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
     }
 
     private HapiTokenCreate createNonFungibleTokenWithAdminKeyAndSaveAddress(
-            String tokenName, long supply, String treasury, String adminKey, String supplyKey, String wipeKey, AtomicReference<Address> nonFungibleAddress) {
+            String tokenName,
+            long supply,
+            String treasury,
+            String adminKey,
+            String supplyKey,
+            String wipeKey,
+            AtomicReference<Address> nonFungibleAddress) {
         return tokenCreate(tokenName)
                 .initialSupply(supply)
                 .treasury(treasury)
@@ -1973,17 +2216,19 @@ public class AtomicBatchEndToEndSmartContractsHTSCallsAndAssociationsTest {
                 .exposingAddressTo(nonFungibleAddress::set);
     }
 
-    private List<SpecOperation> createAccountsAndKeys(final AtomicReference<Address> receiverAddressFirst,
-                                                      final AtomicReference<Address> receiverAddressSecond) {
+    private List<SpecOperation> createAccountsAndKeys(
+            final AtomicReference<Address> receiverAddressFirst, final AtomicReference<Address> receiverAddressSecond) {
         return List.of(
                 cryptoCreate(DEFAULT_BATCH_OPERATOR).balance(ONE_MILLION_HBARS),
                 cryptoCreate(OWNER).balance(ONE_MILLION_HBARS),
                 cryptoCreate(RECEIVER_ASSOCIATED_FIRST)
                         .balance(ONE_HBAR)
-                        .exposingCreatedIdTo(id -> receiverAddressFirst.set(asHeadlongAddress(asHexedSolidityAddress(id)))),
+                        .exposingCreatedIdTo(
+                                id -> receiverAddressFirst.set(asHeadlongAddress(asHexedSolidityAddress(id)))),
                 cryptoCreate(RECEIVER_ASSOCIATED_SECOND)
                         .balance(ONE_HBAR)
-                        .exposingCreatedIdTo(id -> receiverAddressSecond.set(asHeadlongAddress(asHexedSolidityAddress(id)))),
+                        .exposingCreatedIdTo(
+                                id -> receiverAddressSecond.set(asHeadlongAddress(asHexedSolidityAddress(id)))),
                 cryptoCreate(RECEIVER_NOT_ASSOCIATED).balance(ONE_HBAR),
                 newKeyNamed(supplyKey),
                 newKeyNamed(adminKey),
