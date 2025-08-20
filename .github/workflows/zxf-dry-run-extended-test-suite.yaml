@@ -126,7 +126,7 @@ jobs:
       slack-detailed-report-webhook: ${{ secrets.SLACK_CITR_DETAILED_REPORTS_WEBHOOK }}
 
   mirror-node-explorer-regression-panel:
-    name: Dry Run: Mirror Node Explorer Regression Panel
+    name: Mirror Node Explorer Regression Panel
     if: ${{ inputs.enable-mirror-node-explorer-regression-panel == true }}
     uses: ./.github/workflows/zxc-mirror-node-explorer-regression.yaml
     with:
