@@ -387,20 +387,6 @@ public class BlockNodeConnectionManager {
     }
 
     /**
-     * Handles connection errors reported by an active BlockNodeConnection.
-     * Schedules a retry for the failed connection and attempts to select a new active node.
-     *
-     * @deprecated Use {@link #closeConnectionAndReschedule(BlockNodeConnection, Duration)} instead
-     * @param connection the connection that received the error
-     * @param initialDelay the delay to wait before retrying the connection
-     */
-    @Deprecated
-    public void rescheduleAndSelectNewNode(
-            @NonNull final BlockNodeConnection connection, @NonNull final Duration initialDelay) {
-        closeConnectionAndReschedule(connection, initialDelay);
-    }
-
-    /**
      * Common logic for handling connection cleanup and rescheduling after a connection is closed.
      * This centralizes the retry and node selection logic.
      */

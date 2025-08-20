@@ -499,7 +499,7 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
      *
      * @param code the code on why stream was ended
      */
-    void endTheStreamWith(PublishStreamRequest.EndStream.Code code) {
+    public void endTheStreamWith(PublishStreamRequest.EndStream.Code code) {
         final var earliestBlockNumber = blockBufferService.getEarliestAvailableBlockNumber();
         final var highestAckedBlockNumber = blockBufferService.getHighestAckedBlockNumber();
 

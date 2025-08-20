@@ -127,7 +127,7 @@ public class BlockNodeNetwork {
     public void addSimulatorNode(Long id) {
         // Find an available port
         int port = findAvailablePort();
-        SimulatedBlockNodeServer server = new SimulatedBlockNodeServer(port, null);
+        SimulatedBlockNodeServer server = new SimulatedBlockNodeServer(port, -1L);
         try {
             server.start();
         } catch (Exception e) {

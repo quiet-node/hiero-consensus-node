@@ -21,6 +21,7 @@ public class BlockNodeSimulatorController {
     private static Map<Long, SimulatedBlockNodeServer> simulatedBlockNodes = new HashMap<>();
     // Store the ports of shutdown simulators for restart
     private static final Map<Long, Integer> shutdownSimulatorPorts = new HashMap<>();
+    private static final Map<Long, Long> lastVerifiedBlockNumbers = new HashMap<>();
 
     /**
      * Create a controller for the given network's simulated block nodes.
@@ -234,6 +235,7 @@ public class BlockNodeSimulatorController {
             final SimulatedBlockNodeServer server = simulatedBlockNodes.get(nodeId);
             final int port = server.getPort();
             shutdownSimulatorPorts.put(nodeId, port);
+            lastVerifiedBlockNumbers.put(nodeId, server.getLastVerifiedBlockNumber());
             server.stop();
             log.info("Shutdown simulator {} on port {} to simulate connection drop", nodeId, port);
         } else {
@@ -273,7 +275,7 @@ public class BlockNodeSimulatorController {
             final int port = shutdownSimulatorPorts.get(nodeId);
 
             // Create a new server on the same port
-            final long lastVerifiedBlockNumber = simulatedBlockNodes.get(nodeId).getLastVerifiedBlockNumber();
+            final long lastVerifiedBlockNumber = lastVerifiedBlockNumbers.getOrDefault(nodeId, -1L);
             final SimulatedBlockNodeServer newServer = new SimulatedBlockNodeServer(port, lastVerifiedBlockNumber);
             newServer.start();
 
