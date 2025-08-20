@@ -14,8 +14,6 @@ open module com.swirlds.state.impl.test.fixtures {
     requires transitive org.junit.jupiter.params;
     requires com.swirlds.base;
     requires com.swirlds.common.test.fixtures;
-    requires com.swirlds.fcqueue;
-    requires com.swirlds.logging;
     requires com.swirlds.merkledb.test.fixtures;
     requires com.swirlds.merkledb;
     requires com.swirlds.metrics.api;
@@ -24,8 +22,4 @@ open module com.swirlds.state.impl.test.fixtures {
     requires static transitive com.github.spotbugs.annotations;
 
     exports com.swirlds.state.test.fixtures.merkle;
-    exports com.swirlds.state.test.fixtures.merkle.disk;
-    exports com.swirlds.state.test.fixtures.merkle.singleton;
-    exports com.swirlds.state.test.fixtures.merkle.memory;
-    exports com.swirlds.state.test.fixtures.merkle.queue;
 }

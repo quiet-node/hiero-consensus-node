@@ -20,8 +20,8 @@ import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.test.fixtures.addressbook.RandomRosterBuilder;
 import com.swirlds.platform.test.fixtures.state.RandomSignedStateGenerator;
+import com.swirlds.platform.test.fixtures.state.TestHederaVirtualMapState;
 import com.swirlds.platform.test.fixtures.state.TestPlatformStateFacade;
-import com.swirlds.platform.test.fixtures.state.TestVirtualMapState;
 import com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer;
 import com.swirlds.platform.test.fixtures.virtualmap.VirtualMapUtils;
 import java.time.Duration;
@@ -68,7 +68,7 @@ class SignedStateTests {
     private TestVirtualMapState buildMockState(
             final Random random, final Runnable reserveCallback, final Runnable releaseCallback) {
         final var virtualMapLabel = "vm-" + SignedStateTests.class.getSimpleName() + "-" + java.util.UUID.randomUUID();
-        final var real = TestVirtualMapState.createInstanceWithVirtualMapLabel(
+        final var real = TestHederaVirtualMapState.createInstanceWithVirtualMapLabel(
                 virtualMapLabel, TestPlatformContextBuilder.create().build());
         TestingAppStateInitializer.DEFAULT.initStates(real);
         RosterUtils.setActiveRoster(real, RandomRosterBuilder.create(random).build(), 0L);
@@ -222,8 +222,7 @@ class SignedStateTests {
         final var virtualMapLabel = "vm-" + SignedStateTests.class.getSimpleName() + "-" + java.util.UUID.randomUUID();
         final var virtualMap = VirtualMapUtils.createVirtualMap(virtualMapLabel);
 
-        final MerkleNodeState state = spy(new TestVirtualMapState(
-                virtualMap, TestPlatformContextBuilder.create().build()));
+        final MerkleNodeState state = spy(new TestHederaVirtualMapState(virtualMap, TestPlatformContextBuilder.create().build()));
         final PlatformStateModifier platformState = mock(PlatformStateModifier.class);
         final TestPlatformStateFacade platformStateFacade = mock(TestPlatformStateFacade.class);
         TestingAppStateInitializer.DEFAULT.initPlatformState(state);
