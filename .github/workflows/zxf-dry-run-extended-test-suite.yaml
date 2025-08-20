@@ -126,11 +126,11 @@ jobs:
       slack-detailed-report-webhook: ${{ secrets.SLACK_CITR_DETAILED_REPORTS_WEBHOOK }}
 
   mirror-node-explorer-regression-panel:
-    name: Mirror Node Regression Panel
+    name: Dry Run: Mirror Node Explorer Regression Panel
     if: ${{ inputs.enable-mirror-node-explorer-regression-panel == true }}
     uses: ./.github/workflows/zxc-mirror-node-explorer-regression.yaml
     with:
-      ref: ${{ inputs.commit_sha }} # pass the xts-candidate tag to the MN panel for checkout
+      ref: ${{ inputs.commit_sha }} # pass the xts-candidate tag to the MNE panel for checkout
       custom-job-name: "Mirror Node Explorer Regression"
       solo-version: ${{ vars.CITR_SOLO_VERSION }}
     secrets:
