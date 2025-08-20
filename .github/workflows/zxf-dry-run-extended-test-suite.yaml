@@ -29,6 +29,11 @@ on:
         type: boolean
         default: true
         description: "Run SDK TCK Regression Panel"
+      enable-mirror-node-regression-panel:
+        required: true
+        type: boolean
+        default: true
+        description: "Run Mirror Node Regression Panel"
 
 permissions:
   id-token: write
@@ -122,7 +127,7 @@ jobs:
 
   mirror-node-regression-panel:
     name: Mirror Node Regression Panel
-    if: ${{ needs.fetch-xts-candidate.result == 'success' && needs.fetch-xts-candidate.outputs.xts-tag-exists == 'true' }}
+    if: ${{ inputs.enable-mirror-node-regression-panel == true }}
     uses: ./.github/workflows/zxc-mirror-node-regression.yaml
     with:
       ref: ${{ inputs.commit_sha }} # pass the xts-candidate tag to the MN panel for checkout
