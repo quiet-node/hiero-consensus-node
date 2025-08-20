@@ -6,8 +6,6 @@ import com.hedera.statevalidation.parameterresolver.StateResolver;
 import com.swirlds.common.utility.Labeled;
 import com.swirlds.merkledb.MerkleDb;
 import com.swirlds.state.merkle.MerkleStateRoot;
-import picocli.CommandLine;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -15,6 +13,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import picocli.CommandLine;
 
 @CommandLine.Command(name = "export", description = "Exports the state")
 public class ExportCommand implements Runnable {
@@ -58,27 +57,26 @@ public class ExportCommand implements Runnable {
             ExecutorService executorService = Executors.newFixedThreadPool(MAX_PARALLEL_EXPORTS);
             for (int i = 0; i < state.getNumberOfChildren(); i++) {
                 final Labeled labeled = state.getChild(i);
-                if(labeled == null) {
+                if (labeled == null) {
                     continue;
                 }
                 String[] serviceNameAndStateKey = labeled.getLabel().split("[.]");
                 futures.add(CompletableFuture.runAsync(
                         () -> {
                             try {
-                                final SortedJsonExporter exporter = new SortedJsonExporter(resultDir, state, serviceNameAndStateKey[0], serviceNameAndStateKey[1]);
+                                final SortedJsonExporter exporter = new SortedJsonExporter(
+                                        resultDir, state, serviceNameAndStateKey[0], serviceNameAndStateKey[1]);
                                 exporter.export();
                             } catch (IllegalArgumentException e) {
                                 System.out.println(e.getMessage());
                             }
-
-                        }, executorService));
+                        },
+                        executorService));
             }
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
         } else {
             final SortedJsonExporter exporter = new SortedJsonExporter(resultDir, state, serviceName, stateName);
             exporter.export();
         }
-
     }
 }
-

@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.statevalidation.exporters;
 
+import static com.hedera.statevalidation.ExportCommand.MAX_OBJ_PER_FILE;
+import static com.hedera.statevalidation.ExportCommand.PRETTY_PRINT_ENABLED;
+import static java.util.Objects.requireNonNull;
+
 import com.hedera.pbj.runtime.Codec;
 import com.hedera.pbj.runtime.JsonCodec;
 import com.swirlds.common.utility.Labeled;
@@ -13,7 +17,6 @@ import com.swirlds.state.merkle.singleton.SingletonNode;
 import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.virtualmap.datasource.VirtualLeafRecord;
 import com.swirlds.virtualmap.internal.merkle.VirtualRootNode;
-
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
@@ -30,10 +33,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.LongStream;
-
-import static com.hedera.statevalidation.ExportCommand.MAX_OBJ_PER_FILE;
-import static com.hedera.statevalidation.ExportCommand.PRETTY_PRINT_ENABLED;
-import static java.util.Objects.requireNonNull;
 
 /**
  * This class exports specified state into JSON file(s), the result is sorted by bytes representation
@@ -64,14 +63,13 @@ public class SortedJsonExporter {
         final long startTimestamp = System.currentTimeMillis();
 
         for (int i = 0; i < state.getNumberOfChildren(); i++) {
-            if (state.getChild(i) instanceof Labeled labeled && labeled.getLabel().equals(StateMetadata.computeLabel(serviceName, stateKeyName))) {
+            if (state.getChild(i) instanceof Labeled labeled
+                    && labeled.getLabel().equals(StateMetadata.computeLabel(serviceName, stateKeyName))) {
                 switch (labeled) {
                     case SingletonNode<?> singletonNode -> processForSingleton(singletonNode);
                     case QueueNode<?> queueNode -> processForQueue(queueNode);
                     case VirtualMap virtualMap -> processForVirtualMap(virtualMap);
-                    default ->
-                            throw new IllegalStateException(
-                                    "Expecting SingletonNode, QueueNode or VirtualMap");
+                    default -> throw new IllegalStateException("Expecting SingletonNode, QueueNode or VirtualMap");
                 }
             }
         }
@@ -98,8 +96,11 @@ public class SortedJsonExporter {
             AtomicInteger index = new AtomicInteger(1);
             queueNode.iterator().forEachRemaining(queueItem -> {
                 try {
-                    write(writer, "{\"i\":%s, \"v\":%s}\n"
-                                    .formatted(index.getAndIncrement(), queueItemToJson(queueNode.getLabel(), queueItem)));
+                    write(
+                            writer,
+                            "{\"i\":%s, \"v\":%s}\n"
+                                    .formatted(
+                                            index.getAndIncrement(), queueItemToJson(queueNode.getLabel(), queueItem)));
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
@@ -125,7 +126,8 @@ public class SortedJsonExporter {
 
         final Codec<Object> codec;
         try {
-            VirtualLeafRecord<OnDiskKey, OnDiskValue> firstEntry = virtualRootNode.getRecords().findLeafRecord(ds.getFirstLeafPath(), false);
+            VirtualLeafRecord<OnDiskKey, OnDiskValue> firstEntry =
+                    virtualRootNode.getRecords().findLeafRecord(ds.getFirstLeafPath(), false);
             Object protoObject = firstEntry.getKey().getKey();
             Field codecField = protoObject.getClass().getDeclaredField("PROTOBUF");
             codec = (Codec<Object>) codecField.get(null);
@@ -134,11 +136,11 @@ public class SortedJsonExporter {
         }
 
         final ArrayList<OnDiskKey> keys = new ArrayList<>();
-        LongStream.range(ds.getFirstLeafPath(), ds.getLastLeafPath() + 1)
-                .forEach(path -> {
-                    VirtualLeafRecord<OnDiskKey, OnDiskValue> leafRecord = virtualRootNode.getRecords().findLeafRecord(path, false);
-                    keys.add(leafRecord.getKey());
-                });
+        LongStream.range(ds.getFirstLeafPath(), ds.getLastLeafPath() + 1).forEach(path -> {
+            VirtualLeafRecord<OnDiskKey, OnDiskValue> leafRecord =
+                    virtualRootNode.getRecords().findLeafRecord(path, false);
+            keys.add(leafRecord.getKey());
+        });
         parallelSort(keys, Comparator.comparing(k -> codec.toBytes(k.getKey())));
         return keys;
     }
@@ -152,7 +154,8 @@ public class SortedJsonExporter {
         }
     }
 
-    private List<CompletableFuture<Void>> traverseVmInParallel(final VirtualMap<OnDiskKey, OnDiskValue> vm, final List<OnDiskKey> keys) {
+    private List<CompletableFuture<Void>> traverseVmInParallel(
+            final VirtualMap<OnDiskKey, OnDiskValue> vm, final List<OnDiskKey> keys) {
         List<CompletableFuture<Void>> futures = new ArrayList<>();
         int writingParallelism = keys.size() / MAX_OBJ_PER_FILE;
         for (int i = 0; i <= writingParallelism; i++) {
@@ -166,19 +169,27 @@ public class SortedJsonExporter {
         return futures;
     }
 
-    private void processRange(final VirtualMap<OnDiskKey, OnDiskValue> vm, final List<OnDiskKey> keys, String fileName, int start, int end) {
+    private void processRange(
+            final VirtualMap<OnDiskKey, OnDiskValue> vm,
+            final List<OnDiskKey> keys,
+            String fileName,
+            int start,
+            int end) {
         File file = new File(resultDir, fileName);
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
             for (int i = start; i <= end; i++) {
                 final OnDiskKey key = keys.get(i);
                 final OnDiskValue value = vm.get(key);
-                    write(
-                            writer,
-                            "{\"k\":\"%s\", \"v\":\"%s\"}\n"
-                                    .formatted(
-                                            keyToJson(vm.getLabel(), key.getKey()).replace("\\", "\\\\").replace("\"", "\\\""),
-                                            valueToJson(vm.getLabel(), value.getValue()).replace("\\", "\\\\").replace("\"", "\\\""))
-                    );
+                write(
+                        writer,
+                        "{\"k\":\"%s\", \"v\":\"%s\"}\n"
+                                .formatted(
+                                        keyToJson(vm.getLabel(), key.getKey())
+                                                .replace("\\", "\\\\")
+                                                .replace("\"", "\\\""),
+                                        valueToJson(vm.getLabel(), value.getValue())
+                                                .replace("\\", "\\\\")
+                                                .replace("\"", "\\\"")));
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -196,7 +207,8 @@ public class SortedJsonExporter {
 
     @SuppressWarnings("unchecked")
     private String singletonToJson(SingletonNode<?> singletonNode) {
-        return lookupValueCodecFor(singletonNode.getLabel(), singletonNode.getValue()).toJSON(singletonNode.getValue());
+        return lookupValueCodecFor(singletonNode.getLabel(), singletonNode.getValue())
+                .toJSON(singletonNode.getValue());
     }
 
     @SuppressWarnings("unchecked")
