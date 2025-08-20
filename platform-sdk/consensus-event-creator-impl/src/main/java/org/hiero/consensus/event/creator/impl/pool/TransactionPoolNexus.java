@@ -85,7 +85,7 @@ public class TransactionPoolNexus implements TransactionSupplier {
      */
     private boolean healthy = true;
 
-    private boolean isSyncRoundLagging = false;
+    private volatile boolean isSyncRoundLagging = false;
 
     private final double maxAllowedSyncRoundLag;
 
