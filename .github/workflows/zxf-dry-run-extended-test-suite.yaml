@@ -29,7 +29,7 @@ on:
         type: boolean
         default: true
         description: "Run SDK TCK Regression Panel"
-      enable-mirror-node-explorer-regression-panel:
+      enable-block-node-regression-panel:
         required: true
         type: boolean
         default: true
@@ -125,13 +125,13 @@ jobs:
       slack-tck-report-webhook: ${{ secrets.SLACK_TCK_MONITOR_WEBHOOK }}
       slack-detailed-report-webhook: ${{ secrets.SLACK_CITR_DETAILED_REPORTS_WEBHOOK }}
 
-  mirror-node-explorer-regression-panel:
-    name: Mirror Node Regression Panel
-    if: ${{ inputs.enable-mirror-node-explorer-regression-panel == true }}
-    uses: ./.github/workflows/zxc-mirror-node-explorer-regression.yaml
+  block-node-regression-panel:
+    name: Block Node Regression Panel
+    if: ${{ inputs.enable-block-node-regression-panel == true }}
+    uses: zxc-block-node-regression.yaml
     with:
-      ref: ${{ inputs.commit_sha }} # pass the xts-candidate tag to the MN panel for checkout
-      custom-job-name: "Mirror Node Explorer Regression"
+      ref: ${{ inputs.commit_sha }} # pass the xts-candidate tag to the BN panel for checkout
+      custom-job-name: "Dry Run: Block Node Regression"
       solo-version: ${{ vars.CITR_SOLO_VERSION }}
     secrets:
       access-token: ${{ secrets.GH_ACCESS_TOKEN }}
