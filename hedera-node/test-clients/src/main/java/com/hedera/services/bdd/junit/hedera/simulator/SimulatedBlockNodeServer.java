@@ -96,8 +96,6 @@ public class SimulatedBlockNodeServer {
 
     private final Random random = new Random();
 
-    private final Supplier<Long> externalLastVerifiedBlockNumberSupplier;
-
     private boolean hasEverBeenShutdown = false;
 
     private final AtomicBoolean sendingAcksEnabled = new AtomicBoolean(true);
@@ -106,13 +104,12 @@ public class SimulatedBlockNodeServer {
      * Creates a new simulated block node server on the specified port.
      *
      * @param port the port to listen on
-     * @param lastVerifiedBlockNumberSupplier an optional supplier that provides the last verified block number
-     * from an external source, can be null if not needed
+     * @param lastVerifiedBlockNumber an optional last verified block number
      */
-    public SimulatedBlockNodeServer(final int port, @Nullable final Supplier<Long> lastVerifiedBlockNumberSupplier) {
+    public SimulatedBlockNodeServer(final int port, @Nullable final Long lastVerifiedBlockNumber) {
         this.port = port;
         this.serviceImpl = new MockBlockStreamServiceImpl();
-        this.externalLastVerifiedBlockNumberSupplier = lastVerifiedBlockNumberSupplier;
+        this.lastVerifiedBlockNumber.set(lastVerifiedBlockNumber);
 
         final PbjConfig pbjConfig = PbjConfig.builder()
                 .name("pbj")
@@ -342,15 +339,6 @@ public class SimulatedBlockNodeServer {
                                 if (item.hasBlockHeader()) {
                                     final var header = item.blockHeader();
                                     final long blockNumber = header.number();
-
-                                    // We might want to catch up using a supplier from another BN simulator
-                                    if (externalLastVerifiedBlockNumberSupplier != null
-                                            && externalLastVerifiedBlockNumberSupplier.get()
-                                                            - lastVerifiedBlockNumber.get()
-                                                    > 1) {
-                                        lastVerifiedBlockNumber.set(externalLastVerifiedBlockNumberSupplier.get());
-                                    }
-
                                     final long lastVerifiedBlockNum = lastVerifiedBlockNumber.get();
                                     if (blockNumber - lastVerifiedBlockNum > 1) {
                                         handleBehindResponse(replies, blockNumber, lastVerifiedBlockNum);

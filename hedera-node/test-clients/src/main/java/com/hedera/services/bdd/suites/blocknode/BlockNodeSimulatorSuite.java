@@ -25,7 +25,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 import java.util.stream.Stream;
@@ -193,13 +192,10 @@ public class BlockNodeSimulatorSuite {
                         "onError invoked",
                         String.format("Selected block node localhost:%s for connection attempt", portNumbers.get(1)),
                         String.format(
-                                "[localhost:%s/PENDING] Connection state transitioned from CONNECTING to PENDING",
+                                "[localhost:%s/PENDING] Connection state transitioned from UNINITIALIZED to PENDING",
                                 portNumbers.get(1)),
                         String.format(
                                 "[localhost:%s/ACTIVE] Connection state transitioned from PENDING to ACTIVE",
-                                portNumbers.get(1)),
-                        String.format(
-                                "[localhost:%s/ACTIVE] Scheduled periodic stream reset every PT24H",
                                 portNumbers.get(1)))),
                 doingContextual(
                         spec -> LockSupport.parkNanos(Duration.ofSeconds(20).toNanos())),
@@ -210,16 +206,11 @@ public class BlockNodeSimulatorSuite {
                         connectionDropTime::get,
                         Duration.ofMinutes(1),
                         Duration.of(45, SECONDS),
-                        "onError invoked",
-                        String.format("Selected block node localhost:%s for connection attempt", portNumbers.get(2)),
                         String.format(
-                                "[localhost:%s/PENDING] Connection state transitioned from CONNECTING to PENDING",
+                                "[localhost:%s/PENDING] Connection state transitioned from UNINITIALIZED to PENDING",
                                 portNumbers.get(2)),
                         String.format(
                                 "[localhost:%s/ACTIVE] Connection state transitioned from PENDING to ACTIVE",
-                                portNumbers.get(2)),
-                        String.format(
-                                "[localhost:%s/ACTIVE] Scheduled periodic stream reset every PT24H",
                                 portNumbers.get(2)))),
                 doingContextual(
                         spec -> LockSupport.parkNanos(Duration.ofSeconds(20).toNanos())),
@@ -230,16 +221,11 @@ public class BlockNodeSimulatorSuite {
                         connectionDropTime::get,
                         Duration.ofMinutes(1),
                         Duration.of(45, SECONDS),
-                        "onError invoked",
-                        String.format("Selected block node localhost:%s for connection attempt", portNumbers.get(3)),
                         String.format(
-                                "[localhost:%s/PENDING] Connection state transitioned from CONNECTING to PENDING",
+                                "[localhost:%s/PENDING] Connection state transitioned from UNINITIALIZED to PENDING",
                                 portNumbers.get(3)),
                         String.format(
                                 "[localhost:%s/ACTIVE] Connection state transitioned from PENDING to ACTIVE",
-                                portNumbers.get(3)),
-                        String.format(
-                                "[localhost:%s/ACTIVE] Scheduled periodic stream reset every PT24H",
                                 portNumbers.get(3)))),
                 doingContextual(
                         spec -> LockSupport.parkNanos(Duration.ofSeconds(20).toNanos())),
@@ -251,25 +237,15 @@ public class BlockNodeSimulatorSuite {
                         Duration.ofMinutes(1),
                         Duration.of(45, SECONDS),
                         String.format(
-                                "[localhost:%s/PENDING] Connection state transitioned from CONNECTING to PENDING",
+                                "[localhost:%s/PENDING] Connection state transitioned from UNINITIALIZED to PENDING",
                                 portNumbers.get(1)),
                         String.format(
                                 "[localhost:%s/ACTIVE] Connection state transitioned from PENDING to ACTIVE",
                                 portNumbers.get(1)),
-                        String.format(
-                                "[localhost:%s/ACTIVE] Scheduled periodic stream reset every PT24H",
-                                portNumbers.get(1)),
                         String.format("[localhost:%s/ACTIVE] Closing connection...", portNumbers.get(3)),
                         String.format(
-                                "[localhost:%s/UNINITIALIZED] Connection state transitioned from ACTIVE to UNINITIALIZED",
-                                portNumbers.get(3)),
-                        String.format(
-                                "[localhost:%s/UNINITIALIZED] Connection successfully closed", portNumbers.get(3)),
-                        String.format(
-                                "The existing active connection [localhost:%s/ACTIVE] has an equal or higher priority"
-                                        + " than the connection [localhost:%s/CONNECTING] we are attempting to connect to"
-                                        + " and this new connection attempt will be ignored",
-                                portNumbers.get(1), portNumbers.get(2)))),
+                                "[localhost:%s/CLOSED] Connection state transitioned from ACTIVE to CLOSED",
+                                portNumbers.get(3)))),
                 doingContextual(
                         spec -> LockSupport.parkNanos(Duration.ofSeconds(20).toNanos())));
     }
@@ -362,12 +338,9 @@ public class BlockNodeSimulatorSuite {
                         blockNodeIds = {0},
                         blockNodePriorities = {0},
                         applicationPropertiesOverrides = {
-                            "blockStream.buffer.blockTtl",
-                            "1m",
-                            "blockStream.streamMode",
-                            "BLOCKS",
-                            "blockStream.writerMode",
-                            "FILE_AND_GRPC"
+                            "blockStream.buffer.blockTtl", "30s",
+                            "blockStream.streamMode", "BLOCKS",
+                            "blockStream.writerMode", "FILE_AND_GRPC"
                         })
             })
     @Order(6)
@@ -375,8 +348,7 @@ public class BlockNodeSimulatorSuite {
         final AtomicReference<Instant> timeRef = new AtomicReference<>();
 
         return hapiTest(
-                doingContextual(
-                        spec -> LockSupport.parkNanos(Duration.ofSeconds(20).toNanos())),
+                waitUntilNextBlocks(5).withBackgroundTraffic(true),
                 doingContextual(spec -> timeRef.set(Instant.now())),
                 blockNodeSimulator(0).shutDownImmediately(),
                 sourcingContextual(spec -> assertHgcaaLogContainsTimeframe(
@@ -386,10 +358,6 @@ public class BlockNodeSimulatorSuite {
                         Duration.ofMinutes(6),
                         "Block buffer is saturated; backpressure is being enabled",
                         "!!! Block buffer is saturated; blocking thread until buffer is no longer saturated")),
-                doingContextual(spec -> {
-                    timeRef.set(Instant.now());
-                    LockSupport.parkNanos(TimeUnit.SECONDS.toNanos(20));
-                }),
                 waitForAny(byNodeId(0), Duration.ofSeconds(30), PlatformStatus.CHECKING),
                 blockNodeSimulator(0).startImmediately(),
                 sourcingContextual(

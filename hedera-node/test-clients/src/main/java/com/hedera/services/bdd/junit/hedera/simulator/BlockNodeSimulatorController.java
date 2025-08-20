@@ -217,8 +217,8 @@ public class BlockNodeSimulatorController {
     public void shutdownAllSimulators() {
         shutdownSimulatorPorts.clear();
         for (final Map.Entry<Long, SimulatedBlockNodeServer> entry : simulatedBlockNodes.entrySet()) {
-            final long index = entry.getKey();
-            shutdownSimulator(index);
+            final long nodeId = entry.getKey();
+            shutdownSimulator(nodeId);
         }
         log.info("Shutdown all {} simulators to simulate connection drops", simulatedBlockNodes.size());
     }
@@ -227,17 +227,17 @@ public class BlockNodeSimulatorController {
      * Shutdown a specific simulated block node to simulate a connection drop.
      * The server can be restarted using {@link #startSimulator(long)}.
      *
-     * @param index the index of the simulated block node (0-based)
+     * @param nodeId the index of the simulated block node (0-based)
      */
-    public void shutdownSimulator(long index) {
-        if (index >= 0 && index < simulatedBlockNodes.size()) {
-            final SimulatedBlockNodeServer server = simulatedBlockNodes.get(index);
+    public void shutdownSimulator(long nodeId) {
+        if (nodeId >= 0 && nodeId < simulatedBlockNodes.size()) {
+            final SimulatedBlockNodeServer server = simulatedBlockNodes.get(nodeId);
             final int port = server.getPort();
-            shutdownSimulatorPorts.put(index, port);
+            shutdownSimulatorPorts.put(nodeId, port);
             server.stop();
-            log.info("Shutdown simulator {} on port {} to simulate connection drop", index, port);
+            log.info("Shutdown simulator {} on port {} to simulate connection drop", nodeId, port);
         } else {
-            log.error("Invalid simulator index: {}, valid range is 0-{}", index, simulatedBlockNodes.size() - 1);
+            log.error("Invalid simulator node id: {}, valid range is 0-{}", nodeId, simulatedBlockNodes.size() - 1);
         }
     }
 
@@ -260,31 +260,32 @@ public class BlockNodeSimulatorController {
      * Start a specific previously shutdown simulated block node.
      * This will recreate the server on the same port it was running on before shutdown.
      *
-     * @param index the index of the simulated block node (0-based)
+     * @param nodeId the nodeId of the simulated block node (0-based)
      * @throws IOException if the server fails to start
      */
-    public void startSimulator(final long index) throws IOException {
-        if (!shutdownSimulatorPorts.containsKey(index)) {
-            log.error("Simulator {} was not previously shutdown or has already been restarted", index);
+    public void startSimulator(final long nodeId) throws IOException {
+        if (!shutdownSimulatorPorts.containsKey(nodeId)) {
+            log.error("Simulator {} was not previously shutdown or has already been restarted", nodeId);
             return;
         }
 
-        if (index >= 0 && index < simulatedBlockNodes.size()) {
-            final int port = shutdownSimulatorPorts.get(index);
+        if (nodeId >= 0 && nodeId < simulatedBlockNodes.size()) {
+            final int port = shutdownSimulatorPorts.get(nodeId);
+
             // Create a new server on the same port
-            final SimulatedBlockNodeServer newServer =
-                    new SimulatedBlockNodeServer(port, simulatedBlockNodes.get(index)::getLastVerifiedBlockNumber);
+            final long lastVerifiedBlockNumber = simulatedBlockNodes.get(nodeId).getLastVerifiedBlockNumber();
+            final SimulatedBlockNodeServer newServer = new SimulatedBlockNodeServer(port, lastVerifiedBlockNumber);
             newServer.start();
 
             // Replace the old server in the list
-            simulatedBlockNodes.put(index, newServer);
+            simulatedBlockNodes.put(nodeId, newServer);
 
             // Remove from the shutdown map
-            shutdownSimulatorPorts.remove(index);
+            shutdownSimulatorPorts.remove(nodeId);
 
-            log.info("Restarted simulator {} on port {}", index, port);
+            log.info("Restarted simulator {} on port {}", nodeId, port);
         } else {
-            log.error("Invalid simulator index: {}, valid range is 0-{}", index, simulatedBlockNodes.size() - 1);
+            log.error("Invalid simulator node id: {}, valid range is 0-{}", nodeId, simulatedBlockNodes.size() - 1);
         }
     }
 
