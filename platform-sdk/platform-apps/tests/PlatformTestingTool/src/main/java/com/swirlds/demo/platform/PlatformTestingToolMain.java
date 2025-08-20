@@ -880,7 +880,7 @@ public class PlatformTestingToolMain extends DefaultSwirldMain<PlatformTestingTo
      */
     @Override
     public Function<VirtualMap, PlatformTestingToolState> stateRootFromVirtualMap(
-            @NonNull Configuration configuration, @NonNull Metrics metrics, @NonNull Time time) {
+            @NonNull final Configuration configuration, @NonNull final Metrics metrics, @NonNull final Time time) {
         throw new UnsupportedOperationException();
     }
 

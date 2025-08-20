@@ -186,7 +186,7 @@ public class MigrationTestingToolMain extends DefaultSwirldMain<MigrationTesting
      */
     @Override
     public Function<VirtualMap, MigrationTestingToolState> stateRootFromVirtualMap(
-            @NonNull Configuration configuration, @NonNull Metrics metrics, @NonNull Time time) {
+            @NonNull final Configuration configuration, @NonNull final Metrics metrics, @NonNull final Time time) {
         throw new UnsupportedOperationException();
     }
 

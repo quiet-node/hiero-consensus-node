@@ -39,6 +39,7 @@ public class HederaVirtualMapState extends VirtualMapState<HederaVirtualMapState
     /**
      * Constructs a {@link HederaVirtualMapState} using the specified {@link VirtualMap}.
      *
+     * @param virtualMap    the virtual map whose metrics must already be registered
      * @param configuration the platform configuration
      * @param metrics       the platform metric
      * @param time          the time instance

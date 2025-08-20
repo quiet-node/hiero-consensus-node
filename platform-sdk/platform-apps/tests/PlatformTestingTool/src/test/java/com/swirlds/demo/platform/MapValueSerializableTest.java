@@ -29,7 +29,6 @@ import com.swirlds.merkle.test.fixtures.map.pta.MapKey;
 import com.swirlds.merkle.test.fixtures.map.pta.MapValue;
 import com.swirlds.merkle.test.fixtures.map.pta.TransactionRecord;
 import com.swirlds.platform.test.fixtures.state.TestMerkleStateRoot;
-import com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -76,10 +75,10 @@ class MapValueSerializableTest {
         registry.registerConstructable(new ClassConstructorPair(
                 TestMerkleStateRoot.class,
                 () -> new TestMerkleStateRoot(
-                        TestingAppStateInitializer.CONFIGURATION,
+                        CONFIGURATION,
                         new NoOpMetrics(),
                         Time.getCurrent(),
-                        MerkleCryptographyFactory.create(TestingAppStateInitializer.CONFIGURATION))));
+                        MerkleCryptographyFactory.create(CONFIGURATION))));
         cryptography = TestMerkleCryptoFactory.getInstance();
     }
 

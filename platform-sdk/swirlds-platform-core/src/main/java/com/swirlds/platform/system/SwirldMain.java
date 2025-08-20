@@ -75,9 +75,9 @@ public interface SwirldMain<T extends MerkleNodeState> extends Runnable, Executi
     /**
      * A function to instantiate the state root object from a Virtual Map.
      *
-     * @param configuration
-     * @param metrics
-     * @param time
+     * @param configuration the platform configuration
+     * @param metrics       the platform metric
+     * @param time          the time instance
      * @return a function that accepts a {@code VirtualMap} and returns the state root object.
      */
     Function<VirtualMap, T> stateRootFromVirtualMap(
