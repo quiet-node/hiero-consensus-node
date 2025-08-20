@@ -63,9 +63,8 @@ public class HasScheduleCapacityTest {
                                 .resultThruAbi(
                                         getABIFor(FUNCTION, "hasScheduleCapacityExample", contract.name()),
                                         ContractFnResultAsserts.isLiteralResult(new Object[] {true})),
-                        ContractFnResultAsserts.anyResult()))
                         // for child record asserting, because hasScheduleCapacity is a view function
-        );
+                        ContractFnResultAsserts.anyResult())));
     }
 
     // LeakyRepeatableHapiTest: we should use Repeatable test for single threaded processing. In other case test fails
