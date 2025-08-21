@@ -58,7 +58,9 @@ env:
   GS_ROOT_DIR: gs://performance-engineering-reports/ephemeral/test_runs
   GS_ROOT_HTTPS: https://perf.analytics.eng.hashgraph.io/ephemeral/test_runs
   #Release version from jFrog
-  NLG_VERSION: 0.6.0
+  NLG_VERSION: 0.6.2
+  BlockNode_version: 0.16.1
+  NUM_OF_BLOCK_NODES: 3
 
 jobs:
   performance-tests-start:
@@ -242,6 +244,9 @@ jobs:
           # Generate the init-containers-values7.yaml inline
           cp "${{ github.workspace }}"/.github/workflows/support/citr/init-containers-values7.yaml init-containers-values7.yaml
 
+          # Generate the block-node-values.yaml inline
+          cp "${{ github.workspace }}"/.github/workflows/support/citr/block-node-values.yaml block-node-values.yaml
+
           # Update Taskfile values
           sed -i -e "s@%HOME%@${HOME}@g" -e "s@%SOLO_NAMESPACE%@${{ steps.set-namespace.outputs.namespace }}@g" \
           -e "s@%HEDERA_SERVICES_ROOT%@${curdir}@g" Taskfile.yml
@@ -249,6 +254,7 @@ jobs:
           # Update Init Containers values
           NETWORK_ID="$(echo "${{ steps.set-namespace.outputs.namespace }}" | perl -pne '~s/^.*[^\d](\d+)$/$1/g')"
           sed -i -e "s@%NETWORK_ID%@${NETWORK_ID}@g" init-containers-values7.yaml
+          sed -i -e "s@%NETWORK_ID%@${NETWORK_ID}@g" block-node-values.yaml
 
           if [[ "${NAMESPACE_ALIAS}" =~ ^SDLT[0-9]+$ ]]; then
             NETWORK_OWNER="single-day-longevity-test"
@@ -256,6 +262,7 @@ jobs:
             NETWORK_OWNER="adhoc-performance-test"
           fi
           sed -i -e "s@%NETWORK_OWNER%@${NETWORK_OWNER}@g" init-containers-values7.yaml
+          sed -i -e "s@%NETWORK_OWNER%@${NETWORK_OWNER}@g" block-node-values.yaml
 
           # Generate the application.properties file inline
           cp "${{ github.workspace }}"/.github/workflows/support/citr/application.properties.txt application.properties
@@ -299,6 +306,63 @@ jobs:
           echo Done: solo deploy logs  in "${{ env.GS_ROOT_HTTPS }}/${{ inputs.ref }}_${{ inputs.test-asset }}_${{ github.run_number }}"/solo_deploy
 
           exit "${task_code}"
+
+      - name: Add BlockNodes
+        run: |
+          set +x
+          set +e
+          cd "${{ github.workspace}}"/solo
+          export BLOCK_NODE_VERSION="${{ env.BlockNode_version }}"
+
+          for i in `seq 1 1 ${{ env.NUM_OF_BLOCK_NODES }}`
+          do
+           task solo:block:add
+          done
+          sleep 30
+
+      - name: Restart CNs with BlockNodes defined
+        run: |
+          set +x
+          set +e
+          cd "${{ github.workspace}}"/solo
+          sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ steps.set-namespace.outputs.namespace }}" get svc | grep 'block-node' | awk '{print $3}' > block_ips.txt
+          echo "{\"nodes\": [" > block-nodes.json
+          #no prio2    { \"address\": \"$_\", \"port\": 40841, \"priority\": 2 },
+          cat block_ips.txt | perl -ne '~s/\n//g; if ($. < ${{ env.NUM_OF_BLOCK_NODES }}) {$comma=","} else {$comma="";} \
+            print "{ \"address\": \"$_\", \"port\": 40840, \"priority\": 1 }$comma"."\n";' >> block-nodes.json
+          echo "]}" >> block-nodes.json
+
+          echo "block-nodes.json is:"
+          cat block-nodes.json
+          jq . block-nodes.json
+
+          cat << EOF >> application.properties
+          blockStream.blockNodeConnectionFileDir=data/config
+          grpc.nodeOperatorPortEnabled=true
+          blockStream.writerMode=FILE_AND_GRPC
+          EOF
+
+          for i in `sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ steps.set-namespace.outputs.namespace }}" get pods | grep network-node | awk '{print $1}'`
+          do
+              sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ steps.set-namespace.outputs.namespace }}" exec $i -c root-container -- su - hedera -c bash -c "ps -aef | grep -w java | grep -v grep | awk '{print \$2}' | xargs kill -15"
+          done
+
+          sleep 20
+          echo "Must not have any javas running:"
+          for i in `sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ steps.set-namespace.outputs.namespace }}" get pods | grep network-node | awk '{print $1}'`
+          do
+              sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ steps.set-namespace.outputs.namespace }}" exec $i -c root-container -- su - hedera -c bash -c "ps -aef | grep -w java | grep -v grep"
+          done
+
+          for i in `sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ steps.set-namespace.outputs.namespace }}" get pods | grep network-node | awk '{print $1}'`
+          do
+              sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ steps.set-namespace.outputs.namespace }}" cp application.properties $i:/opt/hgcapp/services-hedera/HapiApp2.0/data/config/application.properties
+              sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ steps.set-namespace.outputs.namespace }}" cp block-nodes.json $i:/opt/hgcapp/services-hedera/HapiApp2.0/data/config/block-nodes.json
+              sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ steps.set-namespace.outputs.namespace }}" cp "${{ github.workspace }}"/.github/workflows/support/citr/startPodJava.sh $i:/opt/hgcapp/services-hedera/HapiApp2.0/startPodJava.sh
+              node_id=`echo ${i} | sed -e 's/network-node\([0-9][0-9]*\)-0/\1/g'`
+              node_id=`expr $node_id - 1`
+              sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ steps.set-namespace.outputs.namespace }}" exec $i -c root-container -- su - hedera -c bash -c "cd /opt/hgcapp/services-hedera/HapiApp2.0; sh startPodJava.sh ${node_id} clean"
+          done
 
       - name: Move to Github Workspace
         run: cd "${{ github.workspace }}"
