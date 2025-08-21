@@ -139,7 +139,7 @@ public class ConsensusNodeManager {
                         selfId.toString(),
                         rosterHistory,
                         platformStateFacade,
-                        (vm) -> state)
+                        virtualMap -> new OtterAppState(virtualMap, platformConfig, metrics, time))
                 .withPlatformContext(platformContext)
                 .withConfiguration(platformConfig)
                 .withKeysAndCerts(keysAndCerts)
