@@ -14,6 +14,12 @@ mainModuleInfo {
     runtimeOnly("org.junit.platform.launcher")
 }
 
+testModuleInfo {
+    requires("org.junit.jupiter.api")
+    requires("org.junit.jupiter.params")
+    requires("org.assertj.core")
+}
+
 tasks.withType<JavaCompile>().configureEach { options.compilerArgs.add("-Xlint:-exports") }
 
 tasks.compileJava { dependsOn(":test-clients:assemble") }
