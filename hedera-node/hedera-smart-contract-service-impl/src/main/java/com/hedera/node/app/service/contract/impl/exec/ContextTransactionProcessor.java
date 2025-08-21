@@ -134,7 +134,7 @@ public class ContextTransactionProcessor implements Callable<CallOutcome> {
         final OpsDurationCounter opsDurationCounter;
         if (opsDurationThrottleEnabled) {
             final boolean hasAnyCapacityLeft = throttleAdviser.availableOpsDurationCapacity() > 0;
-            if (hasAnyCapacityLeft) {
+            if (!hasAnyCapacityLeft) {
                 contractMetrics.opsDurationMetrics().recordTransactionThrottledByOpsDuration();
                 final var outcome = maybeChargeFeesAndReturnOutcome(
                         hevmTransaction.withException(new ResourceExhaustedException(CONSENSUS_GAS_EXHAUSTED)),

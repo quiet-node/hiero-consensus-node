@@ -29,7 +29,6 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Order;
@@ -39,7 +38,6 @@ import org.junit.jupiter.api.Tag;
 @DisplayName("opsDurationThrottle")
 @HapiTestLifecycle
 @OrderedInIsolation
-@Disabled
 public class OpsDurationThrottleTest {
     private static final String OPS_DURATION_THROTTLE = "OpsDurationThrottle";
     private static final String SYSTEM_CONTRACT_TRANSFER = "HtsTransferFrom";
