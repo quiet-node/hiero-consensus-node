@@ -7,6 +7,7 @@ module com.swirlds.base {
     exports com.swirlds.base.units;
     exports com.swirlds.base.utility;
     exports com.swirlds.base.context;
+    exports com.swirlds.base.telemetry;
     exports com.swirlds.base.context.internal to
             com.swirlds.base.test.fixtures,
             com.swirlds.logging;
@@ -35,4 +36,5 @@ module com.swirlds.base {
             org.hiero.consensus.event.creator.impl; // used in TransactionPoolNexusTest
 
     requires static transitive com.github.spotbugs.annotations;
+    requires jdk.jfr;
 }

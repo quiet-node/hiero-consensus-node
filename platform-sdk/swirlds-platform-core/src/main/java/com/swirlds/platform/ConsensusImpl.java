@@ -11,6 +11,7 @@ import com.hedera.hapi.platform.event.EventConsensusData;
 import com.hedera.hapi.platform.state.ConsensusSnapshot;
 import com.hedera.hapi.platform.state.JudgeId;
 import com.hedera.hapi.util.HapiUtils;
+import com.swirlds.base.telemetry.RoundTrace.EventType;
 import com.swirlds.base.time.Time;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.utility.Threshold;
@@ -28,7 +29,7 @@ import com.swirlds.platform.consensus.InitJudges;
 import com.swirlds.platform.consensus.RoundElections;
 import com.swirlds.platform.event.EventUtils;
 import com.swirlds.platform.internal.EventImpl;
-import com.swirlds.platform.jfr.RoundCreated;
+import com.swirlds.base.telemetry.RoundTrace;
 import com.swirlds.platform.metrics.ConsensusMetrics;
 import com.swirlds.platform.util.MarkerFileWriter;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -203,7 +204,7 @@ public class ConsensusImpl implements Consensus {
      */
     private boolean pcesMode = false;
     /** The event that is created when a round is created */
-    private final RoundCreated roundCreatedEvent = new RoundCreated();
+    private final RoundTrace roundTrace = new RoundTrace();
 
     /**
      * Constructs an empty object (no events) to keep track of elections and calculate consensus.
@@ -428,10 +429,12 @@ public class ConsensusImpl implements Consensus {
             // will be instantly decided as not famous. Therefore, the set of famous witnesses
             // in this round is now completely known and immutable. So we can call the following, to
             // record that fact, and propagate appropriately.
+            roundTrace.begin();
             final ConsensusRound round = roundDecided(roundElections);
-            if (round != null && roundCreatedEvent.isEnabled()) {
-                roundCreatedEvent.setAll(round);
-                roundCreatedEvent.commit();
+            if (roundTrace.isEnabled()) {
+                roundTrace.roundNum = round.getRoundNum();
+                roundTrace.eventType = EventType.CREATED;
+                roundTrace.commit();
             }
             return round;
         }

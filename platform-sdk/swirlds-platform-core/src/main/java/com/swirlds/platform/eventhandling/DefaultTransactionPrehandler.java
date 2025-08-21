@@ -5,6 +5,7 @@ import static com.swirlds.logging.legacy.LogMarker.EXCEPTION;
 import static com.swirlds.metrics.api.Metrics.INTERNAL_CATEGORY;
 
 import com.hedera.hapi.platform.event.StateSignatureTransaction;
+import com.swirlds.base.telemetry.EventTrace;
 import com.swirlds.base.time.Time;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.platform.state.ConsensusStateEventHandler;
@@ -44,6 +45,10 @@ public class DefaultTransactionPrehandler implements TransactionPrehandler {
     private final ConsensusStateEventHandler consensusStateEventHandler;
 
     private final Time time;
+    /**
+     * The event trace object to use for tracing events.
+     */
+    private final EventTrace eventTrace = new EventTrace();
 
     /**
      * Constructs a new TransactionPrehandler
@@ -75,6 +80,7 @@ public class DefaultTransactionPrehandler implements TransactionPrehandler {
     @Override
     public Queue<ScopedSystemTransaction<StateSignatureTransaction>> prehandleApplicationTransactions(
             @NonNull final PlatformEvent event) {
+        eventTrace.begin();
         final long startTime = time.nanoTime();
         final Queue<ScopedSystemTransaction<StateSignatureTransaction>> scopedSystemTransactions =
                 new ConcurrentLinkedQueue<>();
@@ -103,7 +109,10 @@ public class DefaultTransactionPrehandler implements TransactionPrehandler {
 
             preHandleTime.update(startTime, time.nanoTime());
         }
-
+        if (eventTrace.isEnabled()) {
+            eventTrace.eventHash = event.getDescriptor().hash().copyToByteArray();
+            eventTrace.commit();
+        }
         return scopedSystemTransactions;
     }
 }

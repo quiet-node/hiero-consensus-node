@@ -27,6 +27,7 @@ import com.hedera.hapi.block.stream.input.ParentEventReference;
 import com.hedera.hapi.block.stream.input.RoundHeader;
 import com.hedera.hapi.block.stream.output.StateChanges;
 import com.hedera.hapi.node.base.ResponseCodeEnum;
+import com.hedera.hapi.node.base.TransactionID;
 import com.hedera.hapi.node.state.blockrecords.BlockInfo;
 import com.hedera.hapi.node.transaction.ExchangeRateSet;
 import com.hedera.hapi.node.transaction.SignedTransaction;
@@ -79,6 +80,8 @@ import com.hedera.node.config.data.SchedulingConfig;
 import com.hedera.node.config.data.TssConfig;
 import com.hedera.node.config.types.StreamMode;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
+import com.swirlds.base.telemetry.RoundTrace;
+import com.swirlds.base.telemetry.TransactionTrace;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.service.PlatformStateService;
 import com.swirlds.platform.state.service.ReadablePlatformStateStore;
@@ -159,6 +162,10 @@ public class HandleWorkflow {
     private final PlatformStateFacade platformStateFacade;
     // Flag to indicate whether we have checked for transplant updates after JVM started
     private boolean checkedForTransplant;
+    /** Transaction trace for tracing purposes */
+    private final TransactionTrace transactionTrace = new TransactionTrace();
+    /** Round trace for tracing purposes */
+    private final RoundTrace roundTrace = new RoundTrace();
 
     @Inject
     public HandleWorkflow(
@@ -238,6 +245,7 @@ public class HandleWorkflow {
             @NonNull final Round round,
             @NonNull final Consumer<ScopedSystemTransaction<StateSignatureTransaction>> stateSignatureTxnCallback) {
         logStartRound(round);
+        roundTrace.begin();
         blockBufferService.ensureNewBlocksPermitted();
         cacheWarmer.warm(state, round);
         if (streamMode != RECORDS) {
@@ -330,6 +338,11 @@ public class HandleWorkflow {
             // to the state so these transactions cannot be replayed in future rounds
             recordCache.commitReceipts(
                     state, round.getConsensusTimestamp(), immediateStateChangeListener, blockStreamManager, streamMode);
+        }
+        if(roundTrace.isEnabled()) {
+            roundTrace.roundNum = round.getRoundNum();
+            roundTrace.eventType = RoundTrace.EventType.EXECUTED;
+            roundTrace.commit();
         }
     }
 
@@ -480,6 +493,7 @@ public class HandleWorkflow {
             @NonNull final ConsensusTransaction txn,
             final long eventBirthRound,
             @NonNull final Consumer<StateSignatureTransaction> stateSignatureTxnCallback) {
+        transactionTrace.begin();
         final var handleStart = System.nanoTime();
 
         // Always use platform-assigned time for user transaction, c.f. https://hips.hedera.com/hip/hip-993
@@ -571,6 +585,12 @@ public class HandleWorkflow {
             } else {
                 blockRecordManager.setLastIntervalProcessTime(userTxn.consensusNow(), state);
             }
+        }
+        // trace transaction execution
+        if (transactionTrace.isEnabled()) {
+            transactionTrace.txHash = TransactionID.PROTOBUF.toBytes(userTxn.txnInfo().transactionID()).toByteArray();
+            transactionTrace.eventType = TransactionTrace.EventType.EXECUTED;
+            transactionTrace.commit();
         }
         return true;
     }

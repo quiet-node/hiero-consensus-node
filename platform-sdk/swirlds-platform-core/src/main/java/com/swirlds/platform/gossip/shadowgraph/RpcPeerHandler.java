@@ -6,6 +6,8 @@ import static com.swirlds.platform.gossip.shadowgraph.SyncUtils.getTheirTipsIHav
 import static org.hiero.base.CompareTo.isGreaterThanOrEqualTo;
 
 import com.hedera.hapi.platform.event.GossipEvent;
+import com.swirlds.base.telemetry.EventTrace;
+import com.swirlds.base.telemetry.EventTrace.EventType;
 import com.swirlds.base.time.Time;
 import com.swirlds.logging.legacy.LogMarker;
 import com.swirlds.platform.gossip.IntakeEventCounter;
@@ -97,6 +99,11 @@ public class RpcPeerHandler implements GossipRpcReceiver {
     private int incomingEventsCounter = 0;
 
     private final SyncGuard syncGuard;
+
+    /**
+     * Event trace for tracing events arriving
+     */
+    private final EventTrace eventTrace = new EventTrace();
 
     /**
      * Create new state class for an RPC peer
@@ -227,7 +234,19 @@ public class RpcPeerHandler implements GossipRpcReceiver {
         // create a send list based on the known set
         final List<PlatformEvent> sendList = sharedShadowgraphSynchronizer.createSendList(
                 selfId, state.eventsTheyHave, state.mySyncData.eventWindow(), state.remoteSyncData.eventWindow());
+        eventTrace.begin();
         sender.sendEvents(sendList.stream().map(PlatformEvent::getGossipEvent).collect(Collectors.toList()));
+        if (eventTrace.isEnabled()) {
+            // trace all self events we have sent
+            sendList.stream()
+                    .filter(platformEvent -> platformEvent.getCreatorId().equals(selfId))
+                    .forEach(platformEvent -> {
+                        eventTrace.eventHash = platformEvent.getHash().copyToByteArray();
+                        eventTrace.eventType = EventType.GOSSIPED;
+                        eventTrace.commit();
+                    });
+        }
+
         outgoingEventsCounter += sendList.size();
         sender.sendEndOfEvents();
         finishedSendingEvents();
@@ -389,9 +408,14 @@ public class RpcPeerHandler implements GossipRpcReceiver {
      * @param gossipEvent event received from the remote peer
      */
     private void handleIncomingSyncEvent(@NonNull final GossipEvent gossipEvent) {
+        eventTrace.begin();
         final PlatformEvent platformEvent = new PlatformEvent(gossipEvent);
         platformEvent.setSenderId(peerId);
         this.intakeEventCounter.eventEnteredIntakePipeline(peerId);
         eventHandler.accept(platformEvent);
+        if (eventTrace.isEnabled()) {
+            eventTrace.eventHash = platformEvent.getHash().copyToByteArray();
+            eventTrace.eventType = EventType.RECEIVED;
+        }
     }
 }

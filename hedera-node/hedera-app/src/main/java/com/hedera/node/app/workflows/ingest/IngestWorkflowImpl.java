@@ -5,6 +5,7 @@ import static com.hedera.hapi.node.base.ResponseCodeEnum.OK;
 import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.node.base.ResponseCodeEnum;
+import com.hedera.hapi.node.base.TransactionID;
 import com.hedera.hapi.node.transaction.TransactionResponse;
 import com.hedera.node.app.spi.workflows.HandleException;
 import com.hedera.node.app.spi.workflows.InsufficientBalanceException;
@@ -13,6 +14,8 @@ import com.hedera.node.app.throttle.ThrottleUsage;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.pbj.runtime.io.buffer.BufferedData;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
+import com.swirlds.base.telemetry.TransactionTrace;
+import com.swirlds.base.telemetry.TransactionTrace.EventType;
 import com.swirlds.common.utility.AutoCloseableWrapper;
 import com.swirlds.state.State;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -59,6 +62,9 @@ public final class IngestWorkflowImpl implements IngestWorkflow {
         requireNonNull(requestBuffer);
         requireNonNull(responseBuffer);
 
+        final TransactionTrace transactionTrace = new TransactionTrace();
+        transactionTrace.begin();
+
         ResponseCodeEnum result = OK;
         long estimatedFee = 0L;
 
@@ -76,6 +82,11 @@ public final class IngestWorkflowImpl implements IngestWorkflow {
 
             // 7. Submit to platform
             final var txInfo = checkerResult.txnInfoOrThrow();
+            if (transactionTrace.isEnabled()) {
+                transactionTrace.txHash = TransactionID.PROTOBUF.toBytes(txInfo.transactionID()).toByteArray();
+                transactionTrace.eventType = EventType.RECEIVED;
+                transactionTrace.commit();
+            }
             submissionManager.submit(txInfo.txBody(), txInfo.serializedSignedTxOrThrow());
         } catch (final InsufficientBalanceException e) {
             estimatedFee = e.getEstimatedFee();
