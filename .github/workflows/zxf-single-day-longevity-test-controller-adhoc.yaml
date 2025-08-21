@@ -13,6 +13,8 @@ on:
           - AdHoc6
           - AdHoc7
           - SDLT2
+          - MDLT4
+
       ref:
         required: true
         default: "main"
