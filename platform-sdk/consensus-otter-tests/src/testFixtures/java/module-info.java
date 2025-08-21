@@ -30,7 +30,6 @@ module org.hiero.otter.fixtures {
     requires com.swirlds.config.extensions;
     requires com.swirlds.merkledb;
     requires com.swirlds.platform.core.test.fixtures;
-    requires org.hiero.base.crypto;
     requires org.hiero.consensus.utility;
     requires com.fasterxml.jackson.core;
     requires com.fasterxml.jackson.databind;
@@ -45,6 +44,7 @@ module org.hiero.otter.fixtures {
     exports org.hiero.otter.fixtures.assertions;
     exports org.hiero.otter.fixtures.junit;
     exports org.hiero.otter.fixtures.logging;
+    exports org.hiero.otter.fixtures.network;
     exports org.hiero.otter.fixtures.result;
     exports org.hiero.otter.fixtures.container.proto;
     exports org.hiero.otter.fixtures.app;
@@ -53,4 +53,6 @@ module org.hiero.otter.fixtures {
     exports org.hiero.otter.fixtures.internal.helpers to
             org.hiero.consensus.otter.docker.app;
     exports org.hiero.otter.fixtures.util;
+    exports org.hiero.otter.fixtures.container.utils to
+            org.hiero.consensus.otter.docker.app;
 }

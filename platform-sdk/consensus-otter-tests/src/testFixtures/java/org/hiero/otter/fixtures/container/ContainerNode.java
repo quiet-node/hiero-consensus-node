@@ -3,8 +3,9 @@ package org.hiero.otter.fixtures.container;
 
 import static com.swirlds.platform.event.preconsensus.PcesUtilities.getDatabaseDirectory;
 import static java.util.Objects.requireNonNull;
-import static org.hiero.otter.fixtures.container.ContainerImage.CONTAINER_CONTROL_PORT;
-import static org.hiero.otter.fixtures.container.ContainerImage.NODE_COMMUNICATION_PORT;
+import static org.hiero.otter.fixtures.container.utils.ContainerConstants.CONTAINER_APP_WORKING_DIR;
+import static org.hiero.otter.fixtures.container.utils.ContainerConstants.CONTAINER_CONTROL_PORT;
+import static org.hiero.otter.fixtures.container.utils.ContainerConstants.NODE_COMMUNICATION_PORT;
 import static org.hiero.otter.fixtures.internal.AbstractNode.LifeCycle.DESTROYED;
 import static org.hiero.otter.fixtures.internal.AbstractNode.LifeCycle.INIT;
 import static org.hiero.otter.fixtures.internal.AbstractNode.LifeCycle.RUNNING;
@@ -16,7 +17,6 @@ import com.google.protobuf.ProtocolStringList;
 import com.hedera.hapi.node.state.roster.Roster;
 import com.hedera.hapi.node.state.roster.RosterEntry;
 import com.hedera.hapi.platform.state.NodeId;
-import com.swirlds.common.config.StateCommonConfig;
 import com.swirlds.config.api.Configuration;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import io.grpc.ManagedChannel;
@@ -64,7 +64,7 @@ import org.hiero.otter.fixtures.result.SingleNodeMarkerFileResult;
 import org.hiero.otter.fixtures.result.SingleNodePcesResult;
 import org.hiero.otter.fixtures.result.SingleNodePlatformStatusResult;
 import org.hiero.otter.fixtures.result.SingleNodeReconnectResult;
-import org.jetbrains.annotations.NotNull;
+import org.testcontainers.containers.Container.ExecResult;
 import org.testcontainers.containers.Network;
 import org.testcontainers.images.builder.ImageFromDockerfile;
 
@@ -83,8 +83,8 @@ public class ContainerNode extends AbstractNode implements Node, TimeTickReceive
     /** The image used to run the consensus node. */
     private final ContainerImage container;
 
-    /** The directory mounted to the container used as the consensus node working directory. */
-    private final Path mountedDir;
+    /** The local base directory where artifacts copied from the container will be stored. */
+    private final Path localOutputDirectory;
 
     /** The channel used for the {@link ContainerControlServiceGrpc} */
     private final ManagedChannel containerControlChannel;
@@ -96,7 +96,7 @@ public class ContainerNode extends AbstractNode implements Node, TimeTickReceive
     private final ContainerControlServiceGrpc.ContainerControlServiceBlockingStub containerControlBlockingStub;
 
     /** The gRPC service used to communicate with the consensus node */
-    private final NodeCommunicationServiceGrpc.NodeCommunicationServiceBlockingStub nodeCommBlockingStub;
+    private NodeCommunicationServiceGrpc.NodeCommunicationServiceBlockingStub nodeCommBlockingStub;
 
     /** An instance of asynchronous actions this node can perform with the default time. */
     private final AsyncNodeActions defaultAsyncAction = withTimeout(DEFAULT_TIMEOUT);
@@ -131,18 +131,12 @@ public class ContainerNode extends AbstractNode implements Node, TimeTickReceive
 
         this.roster = requireNonNull(roster, "roster must not be null");
         this.keysAndCerts = requireNonNull(keysAndCerts, "keysAndCerts must not be null");
-        this.mountedDir = requireNonNull(outputDirectory, "outputDirectory must not be null");
+        this.localOutputDirectory = requireNonNull(outputDirectory, "outputDirectory must not be null");
 
         this.resultsCollector = new NodeResultsCollector(selfId);
         this.nodeConfiguration = new ContainerNodeConfiguration(() -> lifeCycle);
 
-        final String savedStateDirectory = nodeConfiguration
-                .current()
-                .getConfigData(StateCommonConfig.class)
-                .savedStateDirectory()
-                .toString();
-
-        container = new ContainerImage(dockerImage, network, selfId, outputDirectory, savedStateDirectory);
+        container = new ContainerImage(dockerImage, network, selfId);
         container.start();
         containerControlChannel = ManagedChannelBuilder.forAddress(
                         container.getHost(), container.getMappedPort(CONTAINER_CONTROL_PORT))
@@ -157,15 +151,6 @@ public class ContainerNode extends AbstractNode implements Node, TimeTickReceive
 
         // Blocking stub for initializing and killing the consensus node
         containerControlBlockingStub = ContainerControlServiceGrpc.newBlockingStub(containerControlChannel);
-
-        final InitRequest initRequest = InitRequest.newBuilder()
-                .setSelfId(ProtobufConverter.fromPbj(selfId))
-                .build();
-        //noinspection ResultOfMethodCallIgnored
-        containerControlBlockingStub.init(initRequest);
-
-        // Blocking stub for communicating with the consensus node
-        nodeCommBlockingStub = NodeCommunicationServiceGrpc.newBlockingStub(nodeCommChannel);
     }
 
     /**
@@ -294,10 +279,37 @@ public class ContainerNode extends AbstractNode implements Node, TimeTickReceive
         try {
             final Path databaseDirectory =
                     getDatabaseDirectory(configuration, org.hiero.consensus.model.node.NodeId.of(selfId.id()));
-            final Path pcesDirectory = mountedDir.resolve(databaseDirectory);
-            return new SingleNodePcesResultImpl(selfId, nodeConfiguration.current(), pcesDirectory);
+            final Path localPcesDirectory = localOutputDirectory.resolve(databaseDirectory);
+
+            Files.createDirectories(localPcesDirectory);
+
+            // List all files recursively in the container's PCES directory
+            final Path base = Path.of(CONTAINER_APP_WORKING_DIR, databaseDirectory.toString());
+            final ExecResult execResult = container.execInContainer("sh", "-lc", "find '" + base + "' -type f");
+            final String stdout = execResult.getStdout();
+
+            if (stdout != null && !stdout.isBlank()) {
+                final String[] files = stdout.split("\n");
+                for (final String file : files) {
+                    if (file == null || file.isBlank()) {
+                        continue;
+                    }
+                    final Path containerFile = Path.of(file).normalize();
+                    final Path relative = base.relativize(containerFile);
+                    final Path localFile = localPcesDirectory.resolve(relative);
+                    Files.createDirectories(localFile.getParent());
+                    container.copyFileFromContainer(containerFile.toString(), localFile.toString());
+                }
+            } else {
+                log.warn("No PCES files found in container");
+            }
+
+            return new SingleNodePcesResultImpl(selfId, nodeConfiguration.current(), localPcesDirectory);
         } catch (final IOException e) {
-            throw new UncheckedIOException("Failed to resolve directory of PCES files", e);
+            throw new UncheckedIOException("Failed to copy PCES files from container", e);
+        } catch (final InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted while copying PCES files from container", e);
         }
     }
 
@@ -306,7 +318,7 @@ public class ContainerNode extends AbstractNode implements Node, TimeTickReceive
      */
     @Override
     @NonNull
-    public @NotNull SingleNodeReconnectResult newReconnectResult() {
+    public SingleNodeReconnectResult newReconnectResult() {
         return new SingleNodeReconnectResultImpl(selfId, newPlatformStatusResult(), newLogResult());
     }
 
@@ -331,9 +343,10 @@ public class ContainerNode extends AbstractNode implements Node, TimeTickReceive
             Files.createDirectories(logPath.resolve("swirlds-hashstream"));
 
             container.copyFileFromContainer(
-                    "output/swirlds.log", logPath.resolve("swirlds.log").toString());
+                    CONTAINER_APP_WORKING_DIR + "/output/swirlds.log",
+                    logPath.resolve("swirlds.log").toString());
             container.copyFileFromContainer(
-                    "output/swirlds-hashstream/swirlds-hashstream.log",
+                    CONTAINER_APP_WORKING_DIR + "/output/swirlds-hashstream/swirlds-hashstream.log",
                     logPath.resolve("swirlds-hashstream/swirlds-hashstream.log").toString());
         } catch (final IOException e) {
             throw new UncheckedIOException("Failed to copy logs from container", e);
@@ -342,6 +355,7 @@ public class ContainerNode extends AbstractNode implements Node, TimeTickReceive
         if (lifeCycle == RUNNING) {
             log.info("Destroying container of node {}...", selfId);
             containerControlChannel.shutdownNow();
+            nodeCommChannel.shutdownNow();
             container.stop();
         }
         resultsCollector.destroy();
@@ -349,6 +363,9 @@ public class ContainerNode extends AbstractNode implements Node, TimeTickReceive
         lifeCycle = DESTROYED;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void tick(@NonNull final Instant now) {
         EventMessage event;
@@ -395,12 +412,21 @@ public class ContainerNode extends AbstractNode implements Node, TimeTickReceive
 
             log.info("Starting node {}...", selfId);
 
+            final InitRequest initRequest = InitRequest.newBuilder()
+                    .setSelfId(ProtobufConverter.fromPbj(selfId))
+                    .build();
+            //noinspection ResultOfMethodCallIgnored
+            containerControlBlockingStub.init(initRequest);
+
             final StartRequest startRequest = StartRequest.newBuilder()
                     .setRoster(ProtobufConverter.fromPbj(roster))
                     .setKeysAndCerts(KeysAndCertsConverter.toProto(keysAndCerts))
                     .setVersion(ProtobufConverter.fromPbj(version))
                     .putAllOverriddenProperties(nodeConfiguration.overriddenProperties())
                     .build();
+
+            // Blocking stub for communicating with the consensus node
+            nodeCommBlockingStub = NodeCommunicationServiceGrpc.newBlockingStub(nodeCommChannel);
 
             final NodeCommunicationServiceStub stub = NodeCommunicationServiceGrpc.newStub(nodeCommChannel);
             stub.start(startRequest, new StreamObserver<>() {
