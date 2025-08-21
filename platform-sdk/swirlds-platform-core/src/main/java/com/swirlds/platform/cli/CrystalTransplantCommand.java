@@ -2,9 +2,7 @@
 package com.swirlds.platform.cli;
 
 import com.swirlds.base.time.Time;
-import com.swirlds.cli.commands.StateCommand;
 import com.swirlds.cli.utility.AbstractCommand;
-import com.swirlds.cli.utility.SubcommandOf;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.io.filesystem.FileSystemManager;
 import com.swirlds.common.io.utility.SimpleRecycleBin;
@@ -13,9 +11,9 @@ import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.api.ConfigurationBuilder;
 import com.swirlds.platform.state.SavedStateUtils;
+import com.swirlds.platform.state.snapshot.SavedStateMetadata;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.Scanner;
 import picocli.CommandLine;
 
 @CommandLine.Command(
@@ -37,6 +35,8 @@ public class CrystalTransplantCommand extends AbstractCommand {
     @SuppressWarnings("unused") // used by picocli
     private boolean autoConfirm;
 
+    private PlatformContext platformContext;
+
     /**
      * Set the path to state to prepare for transplant.
      */
@@ -53,6 +53,16 @@ public class CrystalTransplantCommand extends AbstractCommand {
      */
     @Override
     public Integer call() throws IOException {
+        final Configuration configuration =
+                ConfigurationBuilder.create().autoDiscoverExtensions().build();
+
+        platformContext = PlatformContext.create(
+                configuration,
+                Time.getCurrent(),
+                new NoOpMetrics(),
+                FileSystemManager.create(configuration),
+                new SimpleRecycleBin(),
+                MerkleCryptographyFactory.create(configuration));
 
         validateOverrideNetworkJson();
 
@@ -68,10 +78,25 @@ public class CrystalTransplantCommand extends AbstractCommand {
     }
 
     private void validateOverrideNetworkJson() {}
-    
+
     private void printDiffsAndGetConfirmation() {}
 
-    private void truncatePCESFilesIfNotAFreezeState() {}
+    private void truncatePCESFilesIfNotAFreezeState() {
+        try {
+            final SavedStateMetadata stateMetadata =
+                    SavedStateMetadata.parse(statePath.resolve(SavedStateMetadata.FILE_NAME));
+            if (stateMetadata.freezeState() == null || !stateMetadata.freezeState()) {
+                final int discardedEventCount = SavedStateUtils.prepareStateForTransplant(statePath, platformContext);
+                System.out.printf(
+                        "PCES file truncation complete. %d events were discarded due to being from a future round.%n",
+                        discardedEventCount);
+            } else {
+                System.out.printf("The state is a freeze state, no truncation is needed.%n");
+            }
+        } catch (final IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     private void copyPCESFilesToCorrectDirectory() {}
 
