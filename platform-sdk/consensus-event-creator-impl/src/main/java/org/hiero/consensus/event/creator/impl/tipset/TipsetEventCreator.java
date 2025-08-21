@@ -27,6 +27,7 @@ import org.hiero.consensus.crypto.PbjStreamHasher;
 import org.hiero.consensus.event.creator.impl.EventCreator;
 import org.hiero.consensus.event.creator.impl.TransactionSupplier;
 import org.hiero.consensus.event.creator.impl.config.EventCreationConfig;
+import org.hiero.consensus.event.creator.impl.jfr.EventCreated;
 import org.hiero.consensus.model.event.EventDescriptorWrapper;
 import org.hiero.consensus.model.event.PlatformEvent;
 import org.hiero.consensus.model.event.UnsignedEvent;
@@ -85,6 +86,11 @@ public class TipsetEventCreator implements EventCreator {
      * Event hasher for unsigned events.
      */
     private final PbjStreamHasher eventHasher;
+
+    /**
+     * JFR event for recording event creation.
+     */
+    private final EventCreated eventCreated = new EventCreated();
 
     /**
      * Create a new tipset event creator.
@@ -186,7 +192,12 @@ public class TipsetEventCreator implements EventCreator {
     public PlatformEvent maybeCreateEvent() {
         final UnsignedEvent event = maybeCreateUnsignedEvent();
         if (event != null) {
+            eventCreated.begin();
+
             lastSelfEvent = signEvent(event);
+            // we have just created and signed an event so let's record it to JFR
+            eventCreated.setAll(lastSelfEvent);
+            eventCreated.commit();
             return lastSelfEvent;
         }
         return null;

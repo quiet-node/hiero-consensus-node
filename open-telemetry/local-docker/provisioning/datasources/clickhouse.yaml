@@ -1,0 +1,9 @@
+apiVersion: 1
+datasources:
+  - name: ClickHouse
+    type: grafana-clickhouse-datasource
+    access: proxy
+    url: http://clickhouse:8123
+    jsonData:
+      defaultDatabase: telemetry
+      # If you set a user/pass in ClickHouse, add "user" and "password" under secureJsonData

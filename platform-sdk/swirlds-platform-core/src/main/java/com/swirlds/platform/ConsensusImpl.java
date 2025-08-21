@@ -28,6 +28,7 @@ import com.swirlds.platform.consensus.InitJudges;
 import com.swirlds.platform.consensus.RoundElections;
 import com.swirlds.platform.event.EventUtils;
 import com.swirlds.platform.internal.EventImpl;
+import com.swirlds.platform.jfr.RoundCreated;
 import com.swirlds.platform.metrics.ConsensusMetrics;
 import com.swirlds.platform.util.MarkerFileWriter;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -201,6 +202,8 @@ public class ConsensusImpl implements Consensus {
      * A flag that signals if we are currently replaying the PCES or not.
      */
     private boolean pcesMode = false;
+    /** The event that is created when a round is created */
+    private final RoundCreated roundCreatedEvent = new RoundCreated();
 
     /**
      * Constructs an empty object (no events) to keep track of elections and calculate consensus.
@@ -425,7 +428,12 @@ public class ConsensusImpl implements Consensus {
             // will be instantly decided as not famous. Therefore, the set of famous witnesses
             // in this round is now completely known and immutable. So we can call the following, to
             // record that fact, and propagate appropriately.
-            return roundDecided(roundElections);
+            final ConsensusRound round = roundDecided(roundElections);
+            if (round != null && roundCreatedEvent.isEnabled()) {
+                roundCreatedEvent.setAll(round);
+                roundCreatedEvent.commit();
+            }
+            return round;
         }
         return null;
     }

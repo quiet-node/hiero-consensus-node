@@ -23,6 +23,7 @@ module org.hiero.consensus.event.creator.impl {
     requires org.hiero.consensus.utility;
     requires org.apache.logging.log4j;
     requires static transitive com.github.spotbugs.annotations;
+    requires jdk.jfr;
 
     provides org.hiero.consensus.event.creator.ConsensusEventCreator with
             org.hiero.consensus.event.creator.impl.ConsensusEventCreatorImpl;
