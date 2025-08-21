@@ -109,7 +109,7 @@ jobs:
           MINOR=$(semver get minor "${{ steps.release-version.outputs.version }}")
 
           NEW_TAG="release-candidate-${MAJOR}.${MINOR}"
-          echo "Release Candiate Tag: ${NEW_TAG}"
+          echo "Release Candidate Tag: ${NEW_TAG}"
           echo "candidate=${NEW_TAG}" >> "${GITHUB_OUTPUT}"
 
       - name: Apply Release Candidate Tag
