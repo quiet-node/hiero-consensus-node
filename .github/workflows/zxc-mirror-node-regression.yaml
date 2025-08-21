@@ -119,7 +119,7 @@ jobs:
 
       # Perform mirror node regression tests
       - name: Execute mirror node acceptance tests
-        run: helm test mirror-node --logs
+        run: helm ls && helm test $(helm ls -q) --logs --timeout 30m
 
       # Collect run logs in a log file, ignore last job as it is the one that runs this workflow
       - name: Collect run logs in a log file
