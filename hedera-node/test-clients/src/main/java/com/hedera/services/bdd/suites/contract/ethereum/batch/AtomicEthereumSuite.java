@@ -1027,7 +1027,6 @@ public class AtomicEthereumSuite {
 
     @HapiTest
     final Stream<DynamicTest> accountDeletionResetsTheAliasNonce() {
-
         final AtomicReference<AccountID> partyId = new AtomicReference<>();
         final AtomicReference<byte[]> partyAlias = new AtomicReference<>();
         final AtomicReference<byte[]> counterAlias = new AtomicReference<>();

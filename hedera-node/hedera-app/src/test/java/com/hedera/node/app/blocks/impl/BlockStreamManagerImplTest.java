@@ -48,6 +48,7 @@ import com.hedera.node.app.blocks.BlockStreamManager;
 import com.hedera.node.app.blocks.BlockStreamService;
 import com.hedera.node.app.blocks.InitialStateHash;
 import com.hedera.node.app.service.networkadmin.impl.FreezeServiceImpl;
+import com.hedera.node.app.spi.info.NetworkInfo;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.VersionedConfigImpl;
 import com.hedera.node.config.data.BlockStreamConfig;
@@ -58,7 +59,6 @@ import com.swirlds.metrics.api.Counter;
 import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.state.service.PlatformStateService;
 import com.swirlds.platform.system.state.notifications.StateHashedNotification;
-import com.swirlds.state.lifecycle.info.NetworkInfo;
 import com.swirlds.state.spi.CommittableWritableStates;
 import com.swirlds.state.spi.ReadableSingletonState;
 import com.swirlds.state.spi.ReadableStates;
@@ -248,9 +248,9 @@ class BlockStreamManagerImplTest {
         subject.setLastIntervalProcessTime(CONSENSUS_NOW);
         assertEquals(CONSENSUS_NOW, subject.lastIntervalProcessTime());
 
-        assertSame(Instant.EPOCH, subject.lastHandleTime());
-        subject.setLastHandleTime(CONSENSUS_NOW);
-        assertEquals(CONSENSUS_NOW, subject.lastHandleTime());
+        assertSame(Instant.EPOCH, subject.lastTopLevelConsensusTime());
+        subject.setLastTopLevelTime(CONSENSUS_NOW);
+        assertEquals(CONSENSUS_NOW, subject.lastTopLevelConsensusTime());
     }
 
     @Test

@@ -29,6 +29,7 @@ import com.hedera.hapi.node.transaction.TransactionBody;
 import com.hedera.node.app.service.contract.impl.annotations.TransactionScope;
 import com.hedera.node.app.service.contract.impl.exec.gas.SystemContractGasCalculator;
 import com.hedera.node.app.service.contract.impl.exec.gas.TinybarValues;
+import com.hedera.node.app.service.contract.impl.exec.metrics.ContractMetrics;
 import com.hedera.node.app.service.contract.impl.exec.utils.PendingCreationMetadata;
 import com.hedera.node.app.service.contract.impl.exec.utils.PendingCreationMetadataRef;
 import com.hedera.node.app.service.contract.impl.records.ContractCreateStreamBuilder;
@@ -40,6 +41,7 @@ import com.hedera.node.app.service.token.api.ContractChangeSummary;
 import com.hedera.node.app.service.token.api.TokenServiceApi;
 import com.hedera.node.app.spi.fees.FeeCharging;
 import com.hedera.node.app.spi.fees.Fees;
+import com.hedera.node.app.spi.ids.EntityIdFactory;
 import com.hedera.node.app.spi.throttle.ThrottleAdviser;
 import com.hedera.node.app.spi.workflows.HandleContext;
 import com.hedera.node.app.spi.workflows.HandleException;
@@ -51,7 +53,6 @@ import com.hedera.node.config.data.HederaConfig;
 import com.hedera.pbj.runtime.ParseException;
 import com.hedera.pbj.runtime.UncheckedParseException;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
-import com.swirlds.state.lifecycle.EntityIdFactory;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.ArrayList;
@@ -86,6 +87,7 @@ public class HandleHederaOperations implements HederaOperations {
     private final AccountsConfig accountsConfig;
     private final EntityIdFactory entityIdFactory;
     private final List<GasChargingEvent> gasChargingEvents = new ArrayList<>(1);
+    private final ContractMetrics contractMetrics;
 
     /**
      * The types of events that occur when charging gas.
@@ -121,7 +123,8 @@ public class HandleHederaOperations implements HederaOperations {
             @NonNull final HederaFunctionality functionality,
             @NonNull final PendingCreationMetadataRef pendingCreationMetadataRef,
             @NonNull final AccountsConfig accountsConfig,
-            @NonNull final EntityIdFactory entityIdFactory) {
+            @NonNull final EntityIdFactory entityIdFactory,
+            @NonNull final ContractMetrics contractMetrics) {
         this.contractsConfig = requireNonNull(contractsConfig);
         this.context = requireNonNull(context);
         this.tinybarValues = requireNonNull(tinybarValues);
@@ -131,6 +134,7 @@ public class HandleHederaOperations implements HederaOperations {
         this.pendingCreationMetadataRef = requireNonNull(pendingCreationMetadataRef);
         this.accountsConfig = requireNonNull(accountsConfig);
         this.entityIdFactory = requireNonNull(entityIdFactory);
+        this.contractMetrics = requireNonNull(contractMetrics);
     }
 
     /**
@@ -523,7 +527,8 @@ public class HandleHederaOperations implements HederaOperations {
                     op.maxAutomaticTokenAssociations(),
                     op.autoRenewAccountId(),
                     op.stakedId(),
-                    op.declineReward());
+                    op.declineReward(),
+                    List.of());
         } else {
             return op;
         }
@@ -537,5 +542,10 @@ public class HandleHederaOperations implements HederaOperations {
     @Nullable
     public ThrottleAdviser getThrottleAdviser() {
         return context.throttleAdviser();
+    }
+
+    @Override
+    public ContractMetrics contractMetrics() {
+        return contractMetrics;
     }
 }
