@@ -5,8 +5,6 @@ import static com.swirlds.logging.legacy.LogMarker.EXCEPTION;
 import static org.hiero.consensus.event.creator.impl.tipset.TipsetAdvancementWeight.ZERO_ADVANCEMENT_WEIGHT;
 
 import com.hedera.hapi.node.state.roster.Roster;
-import com.hedera.hapi.platform.event.EventCore;
-import com.hedera.hapi.platform.event.GossipEvent;
 import com.swirlds.base.time.Time;
 import com.swirlds.common.utility.throttle.RateLimitedLogger;
 import com.swirlds.config.api.Configuration;
@@ -29,7 +27,6 @@ import org.hiero.consensus.crypto.PbjStreamHasher;
 import org.hiero.consensus.event.creator.impl.EventCreator;
 import org.hiero.consensus.event.creator.impl.TransactionSupplier;
 import org.hiero.consensus.event.creator.impl.config.EventCreationConfig;
-import com.swirlds.base.telemetry.EventTrace;
 import org.hiero.consensus.model.event.EventDescriptorWrapper;
 import org.hiero.consensus.model.event.PlatformEvent;
 import org.hiero.consensus.model.event.UnsignedEvent;
@@ -88,11 +85,6 @@ public class TipsetEventCreator implements EventCreator {
      * Event hasher for unsigned events.
      */
     private final PbjStreamHasher eventHasher;
-
-    /**
-     * JFR event for recording event creation.
-     */
-    private final EventTrace eventTrace = new EventTrace();
 
     /**
      * Create a new tipset event creator.
@@ -192,20 +184,9 @@ public class TipsetEventCreator implements EventCreator {
     @Nullable
     @Override
     public PlatformEvent maybeCreateEvent() {
-        eventTrace.begin();
         final UnsignedEvent event = maybeCreateUnsignedEvent();
         if (event != null) {
             lastSelfEvent = signEvent(event);
-            // we have just created and signed an event so let's record it to JFR
-            if (eventTrace.isEnabled()){
-                final GossipEvent gossipEvent = lastSelfEvent.getGossipEvent();
-                final EventCore eventCore = gossipEvent.eventCore();
-                eventTrace.creatorNodeId = (int)eventCore.creatorNodeId();
-                eventTrace.eventHash = lastSelfEvent.getHash().copyToByteArray();
-                eventTrace.birthRound = eventCore.birthRound();
-                eventTrace.eventType = EventTrace.EventType.CREATED;
-                eventTrace.commit();
-            }
             return lastSelfEvent;
         }
         return null;

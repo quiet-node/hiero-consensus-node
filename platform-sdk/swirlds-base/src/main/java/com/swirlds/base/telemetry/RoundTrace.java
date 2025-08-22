@@ -15,5 +15,5 @@ public class RoundTrace extends jdk.jfr.Event {
         EXECUTED
     }
     public long roundNum; // round number
-    public EventType eventType; // type of event
+    public int eventType; // type of event
 }

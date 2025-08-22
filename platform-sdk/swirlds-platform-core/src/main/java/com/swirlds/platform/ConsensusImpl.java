@@ -433,7 +433,7 @@ public class ConsensusImpl implements Consensus {
             final ConsensusRound round = roundDecided(roundElections);
             if (roundTrace.isEnabled()) {
                 roundTrace.roundNum = round.getRoundNum();
-                roundTrace.eventType = EventType.CREATED;
+                roundTrace.eventType = EventType.CREATED.ordinal();
                 roundTrace.commit();
             }
             return round;

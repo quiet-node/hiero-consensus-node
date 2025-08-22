@@ -4,6 +4,7 @@ package com.swirlds.platform.eventhandling;
 import static com.swirlds.logging.legacy.LogMarker.EXCEPTION;
 import static com.swirlds.metrics.api.Metrics.INTERNAL_CATEGORY;
 
+import com.hedera.hapi.platform.event.EventCore;
 import com.hedera.hapi.platform.event.StateSignatureTransaction;
 import com.swirlds.base.telemetry.EventTrace;
 import com.swirlds.base.time.Time;
@@ -110,7 +111,7 @@ public class DefaultTransactionPrehandler implements TransactionPrehandler {
             preHandleTime.update(startTime, time.nanoTime());
         }
         if (eventTrace.isEnabled()) {
-            eventTrace.eventHash = event.getDescriptor().hash().copyToByteArray();
+            eventTrace.eventHash = event.getEventCore().hashCode();
             eventTrace.commit();
         }
         return scopedSystemTransactions;

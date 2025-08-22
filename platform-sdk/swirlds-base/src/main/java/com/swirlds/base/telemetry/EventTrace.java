@@ -9,8 +9,6 @@ package com.swirlds.base.telemetry;
 @jdk.jfr.Category({"Hiero"})
 public class EventTrace extends jdk.jfr.Event {
     public enum EventType {
-        @jdk.jfr.Label("Created")
-        CREATED,
         @jdk.jfr.Label("Gossiped")
         GOSSIPED,
         @jdk.jfr.Label("Received")
@@ -18,8 +16,6 @@ public class EventTrace extends jdk.jfr.Event {
         @jdk.jfr.Label("PreHandled")
         PRE_HANDLED,
     }
-    public int creatorNodeId;
-    public byte[] eventHash; // 48 byte hash of the event
-    public long birthRound;
-    public EventType eventType;
+    public int eventHash; // EventCore.hashCode() value
+    public int eventType;
 }

@@ -27,7 +27,6 @@ import com.hedera.hapi.block.stream.input.ParentEventReference;
 import com.hedera.hapi.block.stream.input.RoundHeader;
 import com.hedera.hapi.block.stream.output.StateChanges;
 import com.hedera.hapi.node.base.ResponseCodeEnum;
-import com.hedera.hapi.node.base.TransactionID;
 import com.hedera.hapi.node.state.blockrecords.BlockInfo;
 import com.hedera.hapi.node.transaction.ExchangeRateSet;
 import com.hedera.hapi.node.transaction.SignedTransaction;
@@ -341,7 +340,7 @@ public class HandleWorkflow {
         }
         if(roundTrace.isEnabled()) {
             roundTrace.roundNum = round.getRoundNum();
-            roundTrace.eventType = RoundTrace.EventType.EXECUTED;
+            roundTrace.eventType = RoundTrace.EventType.EXECUTED.ordinal();
             roundTrace.commit();
         }
     }
@@ -588,8 +587,8 @@ public class HandleWorkflow {
         }
         // trace transaction execution
         if (transactionTrace.isEnabled()) {
-            transactionTrace.txHash = TransactionID.PROTOBUF.toBytes(userTxn.txnInfo().transactionID()).toByteArray();
-            transactionTrace.eventType = TransactionTrace.EventType.EXECUTED;
+            transactionTrace.txHash = userTxn.txnInfo().transactionID().hashCode();
+            transactionTrace.eventType = TransactionTrace.EventType.EXECUTED.ordinal();
             transactionTrace.commit();
         }
         return true;

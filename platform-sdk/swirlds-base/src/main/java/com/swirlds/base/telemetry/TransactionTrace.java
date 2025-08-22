@@ -14,6 +14,6 @@ public class TransactionTrace extends jdk.jfr.Event {
         @jdk.jfr.Label("Executed")
         EXECUTED
     }
-    public byte[] txHash; // transaction id protobuf bytes
-    public EventType eventType; // type of event
+    public int txHash; // TransactionID.hashCode() value
+    public int eventType; // type of event
 }

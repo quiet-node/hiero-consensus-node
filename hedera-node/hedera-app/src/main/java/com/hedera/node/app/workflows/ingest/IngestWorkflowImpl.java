@@ -5,7 +5,6 @@ import static com.hedera.hapi.node.base.ResponseCodeEnum.OK;
 import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.node.base.ResponseCodeEnum;
-import com.hedera.hapi.node.base.TransactionID;
 import com.hedera.hapi.node.transaction.TransactionResponse;
 import com.hedera.node.app.spi.workflows.HandleException;
 import com.hedera.node.app.spi.workflows.InsufficientBalanceException;
@@ -83,8 +82,8 @@ public final class IngestWorkflowImpl implements IngestWorkflow {
             // 7. Submit to platform
             final var txInfo = checkerResult.txnInfoOrThrow();
             if (transactionTrace.isEnabled()) {
-                transactionTrace.txHash = TransactionID.PROTOBUF.toBytes(txInfo.transactionID()).toByteArray();
-                transactionTrace.eventType = EventType.RECEIVED;
+                transactionTrace.txHash = txInfo.transactionID().hashCode();
+                transactionTrace.eventType = EventType.RECEIVED.ordinal();
                 transactionTrace.commit();
             }
             submissionManager.submit(txInfo.txBody(), txInfo.serializedSignedTxOrThrow());

@@ -241,8 +241,8 @@ public class RpcPeerHandler implements GossipRpcReceiver {
             sendList.stream()
                     .filter(platformEvent -> platformEvent.getCreatorId().equals(selfId))
                     .forEach(platformEvent -> {
-                        eventTrace.eventHash = platformEvent.getHash().copyToByteArray();
-                        eventTrace.eventType = EventType.GOSSIPED;
+                        eventTrace.eventHash = platformEvent.getEventCore().hashCode();
+                        eventTrace.eventType = EventType.GOSSIPED.ordinal();
                         eventTrace.commit();
                     });
         }
@@ -414,8 +414,8 @@ public class RpcPeerHandler implements GossipRpcReceiver {
         this.intakeEventCounter.eventEnteredIntakePipeline(peerId);
         eventHandler.accept(platformEvent);
         if (eventTrace.isEnabled()) {
-            eventTrace.eventHash = platformEvent.getHash().copyToByteArray();
-            eventTrace.eventType = EventType.RECEIVED;
+            eventTrace.eventHash = platformEvent.getEventCore().hashCode();
+            eventTrace.eventType = EventType.RECEIVED.ordinal();
         }
     }
 }
