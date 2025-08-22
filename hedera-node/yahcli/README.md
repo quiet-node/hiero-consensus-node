@@ -244,8 +244,6 @@ depends on the keys in the `keys/` directory for subsequent operations, you will
 used to create the account (i.e. the PEM file and pass file) are placed in the appropriate `keys/` directory with the
 standard naming, `accountXXX.pem` and `accountXXX.pass`.
 
-```
-
 # Updating system files
 
 For this example, we will run against a `localhost` network since we will modify a system file.

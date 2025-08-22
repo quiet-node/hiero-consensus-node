@@ -18,10 +18,11 @@ import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec;
  * Minimal utility to read/write a single Ed25519 key from/to an encrypted PEM file.
  */
 public final class Ed25519Utils {
-    private static final Provider ED_PROVIDER = new EdDSASecurityProvider();
     private static final EdDSANamedCurveSpec ED25519_PARAMS =
             EdDSANamedCurveTable.getByName(EdDSANamedCurveTable.ED_25519);
     private static final int ED25519_BYTE_LENGTH = 32;
+
+    public static final Provider ED_PROVIDER = new EdDSASecurityProvider();
 
     static boolean isValidEd25519Key(@NonNull final Bytes key) {
         return key.length() == ED25519_BYTE_LENGTH;

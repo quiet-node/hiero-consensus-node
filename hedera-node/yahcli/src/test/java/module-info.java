@@ -1,18 +1,35 @@
-// SPDX-License-Identifier: Apache-2.0
-module com.hedera.node.yahcli.test {
-    requires com.hedera.node.yahcli;
-    requires org.junit.jupiter.params;
-    requires static com.hedera.node.hapi;
-    requires static com.hedera.node.test.clients;
-    requires static com.google.protobuf;
-    requires static info.picocli;
-    requires static org.assertj.core;
+import com.hedera.services.yahcli.test.YahcliLauncherSessionListener;
+import org.junit.platform.launcher.LauncherSessionListener;
 
-    // For test visibility
-    opens com.hedera.services.yahcli.test to
-            org.junit.platform.commons,
-            org.junit.jupiter.api,
-            org.assertj.core;
-    opens com.hedera.services.yahcli.test.config to
-            org.junit.platform.commons;
+module hiero.consensus.node.yahcli.test {
+    requires com.github.spotbugs.annotations;
+    requires com.google.protobuf;
+    requires com.hedera.node.hapi;
+    requires com.hedera.node.test.clients;
+    requires com.hedera.node.yahcli;
+    requires info.picocli;
+    requires org.apache.logging.log4j;
+    requires org.assertj.core;
+    requires org.junit.jupiter.api;
+    requires org.junit.jupiter.params;
+    requires org.junit.platform.launcher;
+    requires com.swirlds.config.api;
+    requires org.eclipse.collections.api;
+    requires io.github.classgraph;
+    requires simpleclient;
+    requires com.hedera.common.nativesupport;
+    requires org.jspecify;
+    requires javax.inject;
+    requires jakarta.inject;
+    requires io.helidon.common.resumable;
+    requires io.helidon.common.buffers;
+    requires io.helidon.common;
+
+    provides LauncherSessionListener with
+            YahcliLauncherSessionListener;
+
+    opens com.hedera.services.yahcli.test
+            to org.junit.platform.commons;
+    opens com.hedera.services.yahcli.test.scenarios
+            to org.junit.platform.commons;
 }

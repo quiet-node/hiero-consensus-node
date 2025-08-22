@@ -1,16 +1,20 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.services.bdd.spec;
 
+import static com.hedera.node.app.hapi.utils.keys.Ed25519Utils.ED_PROVIDER;
+import static com.hedera.node.app.hapi.utils.keys.KeyUtils.BC_PROVIDER;
 import static com.hedera.services.bdd.spec.HapiPropertySource.asAccount;
 import static com.hedera.services.bdd.spec.HapiPropertySource.asSources;
 import static com.hedera.services.bdd.spec.HapiPropertySource.inPriorityOrder;
 import static com.hedera.services.bdd.spec.keys.KeyFactory.KeyType;
 import static com.hedera.services.bdd.spec.keys.deterministic.Bip0032.mnemonicToEd25519Key;
 import static com.hedera.services.bdd.spec.transactions.TxnUtils.bytecodePath;
+import static java.util.Objects.requireNonNull;
 
 import com.esaulpaugh.headlong.abi.Address;
 import com.hedera.node.app.hapi.utils.CommonPbjConverters;
 import com.hedera.node.app.hapi.utils.keys.Ed25519Utils;
+import com.hedera.node.app.hapi.utils.keys.KeyUtils;
 import com.hedera.node.app.hapi.utils.keys.Secp256k1Utils;
 import com.hedera.services.bdd.spec.keys.SigControl;
 import com.hedera.services.bdd.spec.keys.deterministic.Bip0032;
@@ -28,12 +32,17 @@ import com.hederahashgraph.api.proto.java.ResponseCodeEnum;
 import com.hederahashgraph.api.proto.java.ServiceEndpoint;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.security.PrivateKey;
+import java.security.Provider;
 import java.security.interfaces.ECPrivateKey;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.SplittableRandom;
 import java.util.function.Function;
@@ -125,6 +134,8 @@ public class HapiSpecSetup {
         } else if (StringUtils.isNotEmpty(defaultPayerMnemonicFile())) {
             final var mnemonic = Bip0032.mnemonicFromFile(defaultPayerMnemonicFile());
             return mnemonicToEd25519Key(mnemonic);
+        } else if (StringUtils.isNotEmpty(defaultPayerPemKeyResource())) {
+            return payerKeyFromResource(in -> KeyUtils.readKeyFrom(in, defaultPayerPemKeyPassphrase(), ED_PROVIDER));
         } else {
             return Ed25519Utils.readKeyFrom(defaultPayerPemKeyLoc(), defaultPayerPemKeyPassphrase());
         }
@@ -138,8 +149,21 @@ public class HapiSpecSetup {
     private ECPrivateKey payerKeyAsEcdsa() {
         if (StringUtils.isNotEmpty(defaultPayerKey())) {
             return Secp256k1Utils.readECKeyFrom(CommonUtils.unhex(defaultPayerKey()));
+        } else if (StringUtils.isNotEmpty(defaultPayerPemKeyResource())) {
+            return payerKeyFromResource(in -> KeyUtils.readKeyFrom(in, defaultPayerPemKeyPassphrase(), BC_PROVIDER));
         } else {
             return Secp256k1Utils.readECKeyFrom(new File(defaultPayerPemKeyLoc()), defaultPayerPemKeyPassphrase());
+        }
+    }
+
+    private <T extends PrivateKey> T payerKeyFromResource(@NonNull final Function<InputStream, T> reader) {
+        try (var in = Thread.currentThread().getContextClassLoader().getResourceAsStream(defaultPayerPemKeyResource())) {
+            if (in == null) {
+                throw new IllegalArgumentException("No resource found for default payer key " + defaultPayerPemKeyResource());
+            }
+            return reader.apply(in);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
     }
 
@@ -286,6 +310,10 @@ public class HapiSpecSetup {
 
     public String defaultPayerMnemonicFile() {
         return props.get("default.payer.mnemonicFile");
+    }
+
+    public String defaultPayerPemKeyResource() {
+        return props.get("default.payer.pemKeyResource");
     }
 
     public String defaultPayerPemKeyLoc() {
