@@ -2,7 +2,10 @@
 package com.swirlds.platform.cli;
 
 import com.hedera.hapi.node.base.SemanticVersion;
+import com.hedera.hapi.node.state.roster.Roster;
 import com.hedera.hapi.util.HapiUtils;
+import com.hedera.node.internal.network.Network;
+import com.hedera.pbj.runtime.io.stream.ReadableStreamingData;
 import com.swirlds.base.time.Time;
 import com.swirlds.cli.utility.AbstractCommand;
 import com.swirlds.common.context.PlatformContext;
@@ -12,8 +15,14 @@ import com.swirlds.common.merkle.crypto.MerkleCryptographyFactory;
 import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.api.ConfigurationBuilder;
+import com.swirlds.metrics.api.Metrics;
+import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.SavedStateUtils;
+import com.swirlds.platform.state.service.PlatformStateFacade;
+import com.swirlds.platform.state.signed.StartupStateUtils;
 import com.swirlds.platform.state.snapshot.SavedStateMetadata;
+import com.swirlds.state.merkle.VirtualMapState;
+import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -22,8 +31,12 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.hiero.consensus.model.node.NodeId;
+import org.hiero.consensus.roster.RosterComparator;
+import org.hiero.consensus.roster.RosterUtils;
 import picocli.CommandLine;
 
 @CommandLine.Command(
@@ -31,6 +44,7 @@ import picocli.CommandLine;
         mixinStandardHelpOptions = true,
         description = "Cast a crystallization spell preparing a node to load a transplanted state")
 public class CrystalTransplantCommand extends AbstractCommand {
+    public static final String MAIN_CLASS_NAME = "com.hedera.services.ServicesMain";
     /** The return code for a successful operation. */
     private static final int RETURN_CODE_SUCCESS = 0;
     /** The return code when the user does not confirm the prompt */
@@ -41,8 +55,12 @@ public class CrystalTransplantCommand extends AbstractCommand {
     /** Application properties file name */
     private static final String APPLICATION_PROPERTIES_FILE_NAME = "application.properties";
 
+    public static final String SWIRLD_NAME = "123";
+
     /** The path to the state to prepare for transplant. */
     private Path statePath;
+
+    private Path networkOverrideFile;
 
     @CommandLine.Option(
             names = {"-ac", "--auto-confirm"},
@@ -51,6 +69,7 @@ public class CrystalTransplantCommand extends AbstractCommand {
     private boolean autoConfirm;
 
     private PlatformContext platformContext;
+    private Roster overrideRoster;
 
     /**
      * Set the path to state to prepare for transplant.
@@ -59,6 +78,12 @@ public class CrystalTransplantCommand extends AbstractCommand {
     @SuppressWarnings("unused") // used by picocli
     private void setStatePath(final Path statePath) {
         this.statePath = pathMustExist(statePath.toAbsolutePath());
+    }
+
+    @CommandLine.Parameters(description = "The path to the network override file")
+    @SuppressWarnings("unused") // used by picocli
+    private void setNetworkOverrideFile(final Path networkOverrideFile) {
+        this.networkOverrideFile = pathMustExist(networkOverrideFile.toAbsolutePath());
     }
 
     /**
@@ -92,9 +117,35 @@ public class CrystalTransplantCommand extends AbstractCommand {
         return RETURN_CODE_SUCCESS;
     }
 
-    private void validateOverrideNetworkJson() {}
+    private void validateOverrideNetworkJson() {
+        final Roster roster = loadRosterFrom(networkOverrideFile);
+        if (roster == null) {
+            System.out.printf("Unable to load network override file %s%n", networkOverrideFile);
+        }
+        this.overrideRoster = roster;
+    }
 
-    private void printDiffsAndGetConfirmation() {}
+    private void printDiffsAndGetConfirmation() {
+        final var versionString = platformContext.getConfiguration().getValue(CONFIG_KEY);
+        final var version = Optional.ofNullable(versionString)
+                .map(HapiUtils::fromString)
+                .orElse(SemanticVersion.newBuilder().major(1).build());
+
+        try (final var state = StartupStateUtils.loadStateFile(
+                new SimpleRecycleBin(),
+                NodeId.FIRST_NODE_ID,
+                MAIN_CLASS_NAME,
+                SWIRLD_NAME,
+                SimulatedHederaState::new, // TODO doubt this will work
+                version,
+                new PlatformStateFacade(),
+                platformContext)) {
+            final var rosterHistory =
+                    RosterUtils.createRosterHistory(state.get().getState());
+            final var stateActiveRoster = rosterHistory.getCurrentRoster();
+            System.out.println(RosterComparator.compare(stateActiveRoster, overrideRoster));
+        }
+    }
 
     /**
      * If the state is not a freeze state, this method truncates the PCES files by removing events with future birth
@@ -191,5 +242,49 @@ public class CrystalTransplantCommand extends AbstractCommand {
             return matcher.end();
         }
         return -1;
+    }
+
+    /**
+     * Attempts to load a {@link Roster} from a given network override valid file.
+     *
+     * @param path the path to the file to load the roster from
+     * @return the loaded roster, if it was found and successfully loaded
+     */
+    public static Roster loadRosterFrom(@NonNull final Path path) {
+        if (Files.exists(path)) {
+            try (final var fin = Files.newInputStream(path)) {
+                final var network = Network.JSON.parse(new ReadableStreamingData(fin));
+                return RosterUtils.rosterFrom(network);
+            } catch (Exception e) {
+                System.err.printf("Failed to load %s network info from %s%n", path.toAbsolutePath(), e);
+            }
+        }
+        return null;
+    }
+
+    // TODO: work with foundation team to learn how to load the app state without introducing a dependency on hedera
+    private static class SimulatedHederaState extends VirtualMapState<SimulatedHederaState> implements MerkleNodeState {
+
+        public SimulatedHederaState(@NonNull final Configuration configuration, @NonNull final Metrics metrics) {
+            super(configuration, metrics);
+        }
+
+        public SimulatedHederaState(@NonNull final VirtualMap virtualMap) {
+            super(virtualMap);
+        }
+
+        protected SimulatedHederaState(@NonNull final VirtualMapState<SimulatedHederaState> from) {
+            super(from);
+        }
+
+        @Override
+        protected SimulatedHederaState copyingConstructor() {
+            return new SimulatedHederaState(this);
+        }
+
+        @Override
+        protected SimulatedHederaState newInstance(@NonNull final VirtualMap virtualMap) {
+            return new SimulatedHederaState(virtualMap);
+        }
     }
 }
