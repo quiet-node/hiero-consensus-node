@@ -1185,7 +1185,7 @@ public class AtomicBatchNegativeTest {
                         .hasPrecheck(NOT_SUPPORTED));
     }
 
-    @HapiTest()
+    @HapiTest
     @DisplayName(value = "Duplicated txn inside batch")
     public Stream<DynamicTest> duplicatedTxnInBatch() {
         final var batchOperator = "batchOperator";

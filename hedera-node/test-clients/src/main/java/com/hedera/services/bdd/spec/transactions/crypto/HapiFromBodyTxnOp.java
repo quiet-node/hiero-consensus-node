@@ -21,21 +21,27 @@ import java.util.function.Consumer;
 public class HapiFromBodyTxnOp extends HapiTxnOp<HapiFromBodyTxnOp> {
 
     private final TransactionBody body;
-    private final HederaFunctionality type;
+    private final HederaFunctionality functionality;
 
-    public HapiFromBodyTxnOp(HederaFunctionality functionality, TransactionBody body) {
+    /**
+     * Create transaction op from transaction body.
+     *
+     * @param functionality transaction type.
+     * @param body transaction body.
+     */
+    public HapiFromBodyTxnOp(final HederaFunctionality functionality, final TransactionBody body) {
         this.body = body;
-        this.type = functionality;
+        this.functionality = functionality;
     }
 
     @Override
-    protected long feeFor(HapiSpec spec, Transaction txn, int numPayerKeys) throws Throwable {
+    protected long feeFor(HapiSpec spec, Transaction txn, final int numPayerKeys) throws Throwable {
         return ONE_HBAR;
     }
 
     @Override
     public HederaFunctionality type() {
-        return type;
+        return functionality;
     }
 
     @Override
