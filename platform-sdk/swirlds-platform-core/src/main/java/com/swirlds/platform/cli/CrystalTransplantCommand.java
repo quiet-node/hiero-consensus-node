@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.cli;
 
+import static com.swirlds.platform.util.BootstrapUtils.setupConstructableRegistry;
+import static com.swirlds.platform.util.BootstrapUtils.setupConstructableRegistryWithConfiguration;
+import static com.swirlds.virtualmap.constructable.ConstructableUtils.registerVirtualMapConstructables;
+
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.node.state.roster.Roster;
 import com.hedera.hapi.util.HapiUtils;
@@ -15,15 +19,13 @@ import com.swirlds.common.merkle.crypto.MerkleCryptographyFactory;
 import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.api.ConfigurationBuilder;
-import com.swirlds.metrics.api.Metrics;
-import com.swirlds.platform.state.MerkleNodeState;
+import com.swirlds.platform.cli.utils.HederaAppUtils;
 import com.swirlds.platform.state.SavedStateUtils;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.StartupStateUtils;
 import com.swirlds.platform.state.snapshot.SavedStateMetadata;
-import com.swirlds.state.merkle.VirtualMapState;
-import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import java.io.Console;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -32,8 +34,10 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.hiero.base.constructable.ConstructableRegistryException;
 import org.hiero.consensus.model.node.NodeId;
 import org.hiero.consensus.roster.RosterComparator;
 import org.hiero.consensus.roster.RosterUtils;
@@ -60,6 +64,7 @@ public class CrystalTransplantCommand extends AbstractCommand {
     /** The path to the state to prepare for transplant. */
     private Path statePath;
 
+    private NodeId selfId;
     private Path networkOverrideFile;
 
     @CommandLine.Option(
@@ -85,6 +90,16 @@ public class CrystalTransplantCommand extends AbstractCommand {
     private void setNetworkOverrideFile(final Path networkOverrideFile) {
         this.networkOverrideFile = pathMustExist(networkOverrideFile.toAbsolutePath());
     }
+
+    @CommandLine.Option(
+            names = {"-i", "--id"},
+            required = true,
+            description = "The ID of the target node")
+    @SuppressWarnings("unused") // used by picocli
+    private void setSelfId(final long selfId) {
+        this.selfId = NodeId.of(selfId);
+    }
+
 
     /**
      * This method is called after command line input is parsed.
@@ -131,19 +146,47 @@ public class CrystalTransplantCommand extends AbstractCommand {
                 .map(HapiUtils::fromString)
                 .orElse(SemanticVersion.newBuilder().major(1).build());
 
+        final Roster stateRoster = getStateRoster(version);
+        System.out.println(RosterComparator.compare(stateRoster, this.overrideRoster));
+        if (!this.autoConfirm) {
+            Console console = System.console();
+            String keepGoing = "";
+            while (Objects.equals(keepGoing, "")) {
+                if (console != null) {
+                    keepGoing = console.readLine("Continue? [Y/N]:");
+                } else {
+                    // fallback for IDEs where System.console() is null
+                    System.out.print("Continue? [Y/N]:");
+                    keepGoing = new Scanner(System.in).nextLine();
+                }
+            }
+            if (!keepGoing.equalsIgnoreCase("Y")) {
+                System.exit(1);
+            }
+        }
+    }
+
+    private Roster getStateRoster(final SemanticVersion version) {
+        setupConstructableRegistry();
+        try {
+            setupConstructableRegistryWithConfiguration(platformContext.getConfiguration());
+            registerVirtualMapConstructables(platformContext.getConfiguration());
+        } catch (ConstructableRegistryException e) {
+            throw new RuntimeException(e);
+        }
+
         try (final var state = StartupStateUtils.loadStateFile(
                 new SimpleRecycleBin(),
                 NodeId.FIRST_NODE_ID,
                 MAIN_CLASS_NAME,
                 SWIRLD_NAME,
-                SimulatedHederaState::new, // TODO doubt this will work
+                HederaAppUtils::createrNewMerkleNodeState,
                 version,
                 new PlatformStateFacade(),
                 platformContext)) {
             final var rosterHistory =
                     RosterUtils.createRosterHistory(state.get().getState());
-            final var stateActiveRoster = rosterHistory.getCurrentRoster();
-            System.out.println(RosterComparator.compare(stateActiveRoster, overrideRoster));
+            return rosterHistory.getCurrentRoster();
         }
     }
 
@@ -260,31 +303,5 @@ public class CrystalTransplantCommand extends AbstractCommand {
             }
         }
         return null;
-    }
-
-    // TODO: work with foundation team to learn how to load the app state without introducing a dependency on hedera
-    private static class SimulatedHederaState extends VirtualMapState<SimulatedHederaState> implements MerkleNodeState {
-
-        public SimulatedHederaState(@NonNull final Configuration configuration, @NonNull final Metrics metrics) {
-            super(configuration, metrics);
-        }
-
-        public SimulatedHederaState(@NonNull final VirtualMap virtualMap) {
-            super(virtualMap);
-        }
-
-        protected SimulatedHederaState(@NonNull final VirtualMapState<SimulatedHederaState> from) {
-            super(from);
-        }
-
-        @Override
-        protected SimulatedHederaState copyingConstructor() {
-            return new SimulatedHederaState(this);
-        }
-
-        @Override
-        protected SimulatedHederaState newInstance(@NonNull final VirtualMap virtualMap) {
-            return new SimulatedHederaState(virtualMap);
-        }
     }
 }
