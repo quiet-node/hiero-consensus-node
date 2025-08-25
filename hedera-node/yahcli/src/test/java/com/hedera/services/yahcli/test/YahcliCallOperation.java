@@ -6,9 +6,16 @@ import static java.util.Objects.requireNonNull;
 
 import com.hedera.services.bdd.junit.hedera.subprocess.SubProcessNetwork;
 import com.hedera.services.bdd.spec.HapiSpec;
+import com.hedera.services.bdd.spec.transactions.TxnUtils;
 import com.hedera.services.yahcli.Yahcli;
 import edu.umd.cs.findbugs.annotations.NonNull;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Optional;
+import java.util.function.Consumer;
+
+import edu.umd.cs.findbugs.annotations.Nullable;
 import org.junit.jupiter.api.Assertions;
 import picocli.CommandLine;
 
@@ -19,8 +26,16 @@ import picocli.CommandLine;
 public class YahcliCallOperation extends AbstractYahcliOperation<YahcliCallOperation> {
     private final String[] args;
 
+    @Nullable
+    private Consumer<String> outputCb;
+
     public YahcliCallOperation(@NonNull final String[] args) {
         this.args = requireNonNull(args);
+    }
+
+    public YahcliCallOperation exposingOutputTo(@NonNull final Consumer<String> outputCb) {
+        this.outputCb = requireNonNull(outputCb);
+        return this;
     }
 
     @Override
@@ -41,10 +56,24 @@ public class YahcliCallOperation extends AbstractYahcliOperation<YahcliCallOpera
             final var c = configLocOrThrow();
             finalizedArgs = prepend(finalizedArgs, "-c", c);
         }
-        final int rc = commandLine.execute(finalizedArgs);
-        if (rc != 0) {
-            return Optional.of(Assertions.fail(
-                    "Yahcli command <<" + String.join(" ", finalizedArgs) + ">> failed with exit code " + rc));
+        try {
+            Path outputPath = null;
+            if (outputCb != null) {
+                outputPath = Files.createTempFile(TxnUtils.randomUppercase(8), ".out");
+                finalizedArgs = prepend(finalizedArgs, "-o", outputPath.toAbsolutePath().toString());
+            }
+            final int rc = commandLine.execute(finalizedArgs);
+            if (rc != 0) {
+                Assertions.fail(
+                        "Yahcli command <<" + String.join(" ", finalizedArgs) + ">> failed with exit code " + rc);
+            }
+            if (outputPath != null) {
+                final var output = Files.readString(outputPath);
+                outputCb.accept(output);
+                Files.deleteIfExists(outputPath);
+            }
+        } catch (Throwable t) {
+            return Optional.of(t);
         }
         return Optional.empty();
     }

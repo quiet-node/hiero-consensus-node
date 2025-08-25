@@ -20,7 +20,11 @@ public class AccountsCommandsTest {
     @HapiTest
     final Stream<DynamicTest> readmeAccountsCreateExample() {
         return hapiTest(
-                yahcliAccounts("create", "-d", "hbar", "-a", "1", "--memo", "Who danced between"),
+                yahcliAccounts("create", "-d", "hbar", "-a", "1", "--memo", "Who danced between").exposingOutputTo(s -> {
+                    System.out.println("-----");
+                    System.out.println(s);
+                    System.out.println("-----");
+                }),
                 sourcingContextual(spec -> getAccountInfo(
                                 asAccountString(spec.accountIdFactory().apply(1001L)))
                         .has(accountWith().balance(ONE_HBAR).memo("Who danced between"))));
