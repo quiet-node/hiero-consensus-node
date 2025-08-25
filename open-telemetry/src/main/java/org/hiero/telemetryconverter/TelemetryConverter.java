@@ -2,48 +2,43 @@ package org.hiero.telemetryconverter;
 
 import static org.hiero.telemetryconverter.Utils.OPEN_TELEMETRY_SCHEMA_URL;
 
-import com.hedera.hapi.block.stream.Block;
-import com.hedera.hapi.block.stream.BlockItem;
-import com.hedera.hapi.block.stream.output.BlockHeader;
-import com.hedera.pbj.runtime.ParseException;
-import com.hedera.pbj.runtime.io.buffer.Bytes;
-import com.hedera.pbj.runtime.io.stream.ReadableStreamingData;
 import com.hedera.pbj.runtime.io.stream.WritableStreamingData;
 import io.opentelemetry.pbj.common.v1.InstrumentationScope;
 import io.opentelemetry.pbj.resource.v1.Resource;
 import io.opentelemetry.pbj.trace.v1.ResourceSpans;
 import io.opentelemetry.pbj.trace.v1.ScopeSpans;
 import io.opentelemetry.pbj.trace.v1.Span;
-import io.opentelemetry.pbj.trace.v1.Span.SpanKind;
-import io.opentelemetry.pbj.trace.v1.Status;
-import io.opentelemetry.pbj.trace.v1.Status.StatusCode;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.MessageDigest;
 import java.time.ZoneId;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
-import java.util.zip.GZIPInputStream;
 import jdk.jfr.consumer.RecordedEvent;
 import jdk.jfr.consumer.RecordingFile;
 import org.eclipse.collections.impl.map.mutable.primitive.IntObjectHashMap;
 import org.eclipse.collections.impl.map.mutable.primitive.LongObjectHashMap;
-import org.hiero.telemetryconverter.model.EventTraceInfo;
-import org.hiero.telemetryconverter.model.RoundTraceInfo;
-import org.hiero.telemetryconverter.model.TransactionTraceInfo;
+import org.hiero.telemetryconverter.model.combined.BlockInfo;
+import org.hiero.telemetryconverter.model.trace.BlockTraceInfo;
+import org.hiero.telemetryconverter.model.trace.EventTraceInfo;
+import org.hiero.telemetryconverter.model.trace.RoundTraceInfo;
+import org.hiero.telemetryconverter.model.trace.TransactionTraceInfo;
+import org.hiero.telemetryconverter.spancreators.BlockSpanCreator;
 
 /**
  * TelemetryConverter is a utility class for converting telemetry data.
  * <p>
- * To record JFR telemetry, use the following command in project root:
- * <pre>jcmd &lt;PID&gt; JFR.start duration=300s filename=hedera-node/hedera-app/build/node/data/trace.jfr</pre>
+ * To record JFR telemetry, first start consesus node and wait for it to be ready
+ * <pre>./gradlew app:run</pre>
+ * Then in another terminal, run the load generator to create some trasaction load
+ * <pre> java -cp network-load-generator-0.6.0.jar com.hedera.benchmark.NftTransferLoadTest -a 10 -n 10 -t 100000</pre>
+ * Then in another terminal, find the PID of the node process with jps then run the jcmd command to start JFR recording
+ * <pre>jcmd &lt;PID&gt; JFR.start duration=300s filename=&lt;ABSOLUTE_PATH_TO_CONSENSUS_NODE_REPO&gt;/hedera-node/hedera-app/build/node/data/trace-node-&lt;NODE_ID&gt;.jfr</pre>
  * </p>
  */
 @SuppressWarnings("CallToPrintStackTrace")
@@ -53,12 +48,14 @@ public final class TelemetryConverter {
     private static final Path JFR_TRACE_DIR = PROJECT_ROOT.resolve("hedera-node/hedera-app/build/node/data/");
     private static final Path BLOCK_FILES_DIR = PROJECT_ROOT.resolve("hedera-node/hedera-app/build/node/data/blockStreams/block-0.0.3");
 
+    /** Cache of all block traces found in the JFR file, keyed by block number. */
+    private static final LongObjectHashMap<List<BlockTraceInfo>> blockTraces = new LongObjectHashMap<>();
     /** Cache of all round traces found in the JFR file, keyed by round number. */
-    private static final LongObjectHashMap<LongObjectHashMap<RoundTraceInfo>> roundTraces = new LongObjectHashMap<>();
+    private static final LongObjectHashMap<List<RoundTraceInfo>> roundTraces = new LongObjectHashMap<>();
     /** Cache of all event traces found in the JFR file, keyed by event hash. */
-    private static final IntObjectHashMap<LongObjectHashMap<EventTraceInfo>> eventTraces = new IntObjectHashMap<>();
+    private static final IntObjectHashMap<List<EventTraceInfo>> eventTraces = new IntObjectHashMap<>();
     /** Cache of all transaction traces found in the JFR file, keyed by transaction hash. */
-    private static final IntObjectHashMap<LongObjectHashMap<TransactionTraceInfo>> transactionTraces = new IntObjectHashMap<>();
+    private static final IntObjectHashMap<List<TransactionTraceInfo>> transactionTraces = new IntObjectHashMap<>();
     /** Directory to write test output files to */
     private static final Path testOutputDir = PROJECT_ROOT.resolve("build/telemetry");
 
@@ -98,14 +95,20 @@ public final class TelemetryConverter {
                         int endIndex = fileName.indexOf('.');
                         return Long.parseLong(fileName.substring(0, endIndex));
                     }))
-                    .map(path -> {
-                        try (var in = new ReadableStreamingData(new GZIPInputStream(Files.newInputStream(path)))) {
-                            return convertBlockToTrace(path, Block.PROTOBUF.parse(in));
-                        } catch (IOException | ParseException e) {
-                            System.err.printf("Error reading block file %s: %s%n", path, e.getMessage());
+                    .map(blockFilePath -> {
+                        try {
+                            final BlockInfo blockInfo = new BlockInfo(blockFilePath,
+                                    blockTraces, roundTraces, eventTraces, transactionTraces);
+                            System.out.println("Created BlockInfo: " + blockInfo);
+                            return blockInfo;
+                        } catch (Exception e) {
+                            System.err.printf("Error creating BlockInfo for block %s, because -> %s%n",
+                                    blockFilePath.getFileName(), e.getMessage());
                             return null;
                         }
                     })
+                    .filter(Objects::nonNull)
+                    .map(BlockSpanCreator::createBlockSpans)
                     .filter(Objects::nonNull)
                     .forEach(TelemetryConverter::sendSpans);
         }
@@ -119,48 +122,50 @@ public final class TelemetryConverter {
      * @param jfrFile the path to the JFR file
      */
     private static void readJfrFile(Path jfrFile) {
-        System.out.println("Reading JFR file: " + jfrFile);
         final String fileName = jfrFile.getFileName().toString();
         final long nodeId = Long.parseLong(fileName.substring(fileName.indexOf("node-") + 5,fileName.indexOf(".jfr")));
+        System.out.printf("Reading JFR file: %s , nodeId:%d%n", jfrFile, nodeId);
         try (var rf = new RecordingFile(jfrFile)) {
             while (rf.hasMoreEvents()) {
-                RecordedEvent e = rf.readEvent();
-                System.out.printf("%s  start=%s  dur=%s  thread=%s%n",
-                        e.getEventType().getName(),
-                        e.getStartTime().atZone(SERVER_TIMEZONE),
-                        e.getDuration(),
-                        e.getThread() == null ? "-" : e.getThread().getJavaName());
+                final RecordedEvent e = rf.readEvent();
                 try {
                     switch (e.getEventType().getName()) {
+                        case "consensus.Block" -> {
+                            final long blockNum = e.getLong("blockNumber");
+                            System.out.println("blockNum = " + blockNum);
+                            final int eventTypeOrdinal = e.getInt("eventType");
+                            final BlockTraceInfo blockTraceInfo = new BlockTraceInfo(nodeId, blockNum,
+                                    BlockTraceInfo.EventType.values()[eventTypeOrdinal],
+                                    Utils.instantToUnixEpocNanos(e.getStartTime()),
+                                    Utils.instantToUnixEpocNanos(e.getEndTime()));
+                            blockTraces.getIfAbsentPut(blockNum, ArrayList::new).add(blockTraceInfo);
+                        }
                         case "consensus.Round" -> {
                             final long roundNum = e.getLong("roundNum");
                             final int eventTypeOrdinal = e.getInt("eventType");
-                            final RoundTraceInfo roundTraceInfo = new RoundTraceInfo(roundNum,
+                            final RoundTraceInfo roundTraceInfo = new RoundTraceInfo(nodeId, roundNum,
                                     RoundTraceInfo.EventType.values()[eventTypeOrdinal],
                                     Utils.instantToUnixEpocNanos(e.getStartTime()),
                                     Utils.instantToUnixEpocNanos(e.getEndTime()));
-                            final LongObjectHashMap<RoundTraceInfo> roundNumTraces = roundTraces.getIfAbsent(roundNum, LongObjectHashMap::new);
-                            roundNumTraces.put(nodeId, roundTraceInfo);
+                            roundTraces.getIfAbsentPut(roundNum, ArrayList::new).add(roundTraceInfo);
                         }
                         case "consensus.Event" -> {
                             final int eventHash = e.getInt("eventHash");
                             final int eventTypeOrdinal = e.getInt("eventType");
-                            final EventTraceInfo eventTraceInfo = new EventTraceInfo(eventHash,
+                            final EventTraceInfo eventTraceInfo = new EventTraceInfo(nodeId, eventHash,
                                     EventTraceInfo.EventType.values()[eventTypeOrdinal],
                                     Utils.instantToUnixEpocNanos(e.getStartTime()),
                                     Utils.instantToUnixEpocNanos(e.getEndTime()));
-                            final LongObjectHashMap<EventTraceInfo> eventHashTraces = eventTraces.getIfAbsent(eventHash, LongObjectHashMap::new);
-                            eventHashTraces.put(nodeId, eventTraceInfo);
+                            eventTraces.getIfAbsentPut(eventHash, ArrayList::new).add(eventTraceInfo);
                         }
-                        case "cconsensus.Transaction" -> {
+                        case "consensus.Transaction" -> {
                             final int txHash = e.getInt("txHash");
                             final int eventTypeOrdinal = e.getInt("eventType");
-                            final TransactionTraceInfo transactionTraceInfo = new TransactionTraceInfo(txHash,
+                            final TransactionTraceInfo transactionTraceInfo = new TransactionTraceInfo(nodeId, txHash,
                                     TransactionTraceInfo.EventType.values()[eventTypeOrdinal],
                                     Utils.instantToUnixEpocNanos(e.getStartTime()),
                                     Utils.instantToUnixEpocNanos(e.getEndTime()));
-                            final LongObjectHashMap<TransactionTraceInfo> txHashTraces = transactionTraces.getIfAbsent(txHash, LongObjectHashMap::new);
-                            txHashTraces.put(nodeId, transactionTraceInfo);
+                            transactionTraces.getIfAbsentPut(txHash, ArrayList::new).add(transactionTraceInfo);
                         }
                         // ignore other events
                     }
@@ -172,76 +177,17 @@ public final class TelemetryConverter {
             System.err.printf("Error reading JFR file %s: %s%n", jfrFile, e.getMessage());
             e.printStackTrace();
         }
-    }
-
-    private static List<Span> convertBlockToTrace(Path blockFile, Block block) {
-        final List<Span> spans = new ArrayList<>();
-        final List<BlockItem> items = block.items();
-        BlockHeader header = items.getFirst().blockHeader();
-        try {
-            // create a digest for creating trace ids
-            final MessageDigest digest = MessageDigest.getInstance("MD5");
-            // create a trace id based on the block
-            final Bytes blockTraceID = Utils.longToHashBytes(digest, header.number());
-            for (int i = 0; i < items.size(); i++) {
-                BlockItem item = items.get(i);
-                if (item.hasRoundHeader()) {
-                    // find all round trace info
-                    // create a round span
-//                    TransactionTraceInfo txInfo = transactionTraces.get(item.transaction().hash());
-//                    if (txInfo != null) {
-//                        // create a span for the transaction
-//                        ScopeSpans.Builder txSpanBuilder = ScopeSpans.newBuilder()
-//                                .setScope("Transaction")
-//                                .setStartTime(txInfo.startTime())
-//                                .setEndTime(txInfo.endTime())
-//                                .putAttributes("transactionHash", item.transaction().hash());
-//                        spans.add(txSpanBuilder.build());
-//                    }
-                } else if (item.hasEventHeader()) {
-                    // create an event span
-//                    EventTraceInfo eventInfo = eventTraces.get(item.event().hash());
-//                    if (eventInfo != null) {
-//                        // create a span for the event
-//                        ScopeSpans.Builder eventSpanBuilder = ScopeSpans.newBuilder()
-//                                .setScope("Event")
-//                                .setStartTime(eventInfo.startTime())
-//                                .setEndTime(eventInfo.endTime())
-//                                .putAttributes("eventHash", item.event().hash());
-//                        spans.add(eventSpanBuilder.build());
-//                    }
-                }
-            }
-            // create a span for the block
-            final Span blockSpan = new Span(
-                    blockTraceID, // 16 byte trace id
-                    Utils.longToBytes(header.number()), // 8 byte span id
-                    null, // don't think we need to use trace state
-                    null, // no parent span id
-                    0, // TODO flags
-                    "Block " + header.number(),
-                    SpanKind.SPAN_KIND_CLIENT,
-                    123L, // TODO start time, search for time of first transaction in the block
-                    Utils.fileCreationTimeEpocNanos(blockFile),
-                    Collections.emptyList(), // TODO attributes
-                    0,
-                    Collections.emptyList(), // TODO events
-                    0,
-                    Collections.emptyList(), // TODO links
-                    0,
-                    new Status(null, StatusCode.STATUS_CODE_OK)
-            );
-            spans.add(blockSpan);
-        } catch (Exception e) {
-            System.err.printf("Error converting block %s: %s%n", header.number(), e.getMessage());
-        }
-        return spans;
+        final long numberOfRoundTraces = roundTraces.values().stream().mapToLong(List::size).sum();
+        final long numberOfEventTraces = eventTraces.values().stream().mapToLong(List::size).sum();
+        final long numberOfTransactionTraces = transactionTraces.values().stream().mapToLong(List::size).sum();
+        System.out.printf("    Finished reading JFR file: %s, found %,d round traces, %,d event traces, %,d transaction traces%n",
+                jfrFile, numberOfRoundTraces, numberOfEventTraces, numberOfTransactionTraces);
     }
 
     private static final AtomicLong spanIdCounter = new AtomicLong(0L);
 
     private static void sendSpans(final List<Span> spans) {
-        System.out.println("TelemetryConverter.sendSpans "+spans.size());
+//        System.out.println("TelemetryConverter.sendSpans "+spans.size());
         ResourceSpans resourceSpans = new ResourceSpans(
                 Resource.newBuilder().build(),
                 List.of(ScopeSpans.newBuilder()

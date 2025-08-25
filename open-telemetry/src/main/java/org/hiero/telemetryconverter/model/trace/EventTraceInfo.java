@@ -1,8 +1,7 @@
-package org.hiero.telemetryconverter.model;
+package org.hiero.telemetryconverter.model.trace;
 
-import java.time.Instant;
-
-public record EventTraceInfo(int eventHash,// EventCore.hashCode() value
+public record EventTraceInfo(long nodeId,
+                             int eventHash,// EventCore.hashCode() value
                              EventType eventType,
                              long startTimeNanos,
                              long endTimeNanos) {

@@ -12,7 +12,9 @@ public class RoundTrace extends jdk.jfr.Event {
         @jdk.jfr.Label("Created")
         CREATED,
         @jdk.jfr.Label("Executed")
-        EXECUTED
+        EXECUTED,
+        @jdk.jfr.Label("Hashed")
+        HASHED,
     }
     public long roundNum; // round number
     public int eventType; // type of event

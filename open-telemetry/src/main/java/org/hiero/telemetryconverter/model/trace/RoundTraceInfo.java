@@ -1,15 +1,14 @@
-package org.hiero.telemetryconverter.model;
+package org.hiero.telemetryconverter.model.trace;
 
-import java.time.Instant;
-import java.time.ZonedDateTime;
-
-public record RoundTraceInfo(long roundNum,
+public record RoundTraceInfo(long nodeId,
+                             long roundNum,
                              EventType eventType,
                              long startTimeNanos,
                              long endTimeNanos) {
 
     public enum EventType {
         CREATED,
-        EXECUTED
+        EXECUTED,
+        HASHED
     }
 }

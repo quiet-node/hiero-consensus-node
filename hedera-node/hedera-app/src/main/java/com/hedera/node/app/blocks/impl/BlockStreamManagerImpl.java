@@ -51,6 +51,7 @@ import com.hedera.node.config.data.VersionConfig;
 import com.hedera.node.config.types.DiskNetworkExport;
 import com.hedera.node.internal.network.PendingProof;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
+import com.swirlds.base.telemetry.BlockTrace;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.metrics.api.Counter;
 import com.swirlds.metrics.api.Metrics;
@@ -147,6 +148,8 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
 
     private BlockStreamManagerTask worker;
     private final boolean hintsEnabled;
+    /** Trace to record block creation times for tracing */
+    private final BlockTrace blockTrace = new BlockTrace();
 
     /**
      * Represents a block pending completion by the block hash signature needed for its block proof.
@@ -405,6 +408,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
         final long freezeRoundNumber = platformStateStore.getLatestFreezeRound();
         final boolean closesBlock = shouldCloseBlock(roundNum, freezeRoundNumber);
         if (closesBlock) {
+            blockTrace.begin();
             lifecycle.onCloseBlock(state);
             if (state instanceof HederaVirtualMapState hederaNewStateRoot) {
                 hederaNewStateRoot.commitSingletons();
@@ -525,6 +529,10 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
             // Clear the eventIndexInBlock map for the next block
             eventIndexInBlock.clear();
             eventIndex = 0;
+            // trace block creation time
+            blockTrace.blockNumber = blockNumber;
+            blockTrace.eventType = BlockTrace.EventType.CREATED.ordinal();
+            blockTrace.commit();
         }
         if (fatalShutdownFuture != null) {
             pendingBlocks.forEach(block -> log.fatal("Skipping incomplete block proof for block {}", block.number()));

@@ -11,6 +11,8 @@ import com.hedera.hapi.platform.state.StateValue;
 import com.hedera.pbj.runtime.Codec;
 import com.hedera.pbj.runtime.ParseException;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
+import com.swirlds.base.telemetry.RoundTrace;
+import com.swirlds.base.telemetry.RoundTrace.EventType;
 import com.swirlds.base.time.Time;
 import com.swirlds.common.Reservable;
 import com.swirlds.common.merkle.MerkleNode;
@@ -116,6 +118,9 @@ public abstract class VirtualMapState<T extends VirtualMapState<T>> implements S
     private LongSupplier roundSupplier;
 
     private VirtualMap virtualMap;
+
+    /** Used to trace when the round is hashed. */
+    private final RoundTrace roundTrace = new RoundTrace();
 
     /**
      * Used to track the status of the Platform.
@@ -418,7 +423,12 @@ public abstract class VirtualMapState<T extends VirtualMapState<T>> implements S
     @Override
     @Nullable
     public Hash getHash() {
-        return virtualMap.getHash();
+        roundTrace.begin();
+        final Hash hash =  virtualMap.getHash();
+        roundTrace.roundNum = roundSupplier.getAsLong();
+        roundTrace.eventType = EventType.HASHED.ordinal();
+        roundTrace.commit();
+        return hash;
     }
 
     /**
