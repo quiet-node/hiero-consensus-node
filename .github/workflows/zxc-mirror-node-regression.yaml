@@ -67,7 +67,7 @@ jobs:
           java-version: 21.0.6
 
       - name: Install Helm
-        uses: azure/setup-helm@b9e51907a09c216f16ebe8536097933489208112 # v4.3.0
+        uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4.3.1
 
       # Set up the node environment
       - name: Setup NodeJS Environment
@@ -105,21 +105,21 @@ jobs:
       - name: Configure and run solo
         run: |
           set -ex
-          kind create cluster -n "${{ env.SOLO_CLUSTER_NAME }}"
+          kind create cluster -n "${SOLO_CLUSTER_NAME}"
           solo init
-          solo cluster-ref connect --cluster-ref kind-${{ env.SOLO_CLUSTER_NAME }} --context kind-${{ env.SOLO_CLUSTER_NAME }}
-          solo deployment create -n "${{ env.SOLO_NAMESPACE }}" --deployment "${{ env.SOLO_DEPLOYMENT }}"
-          solo deployment add-cluster --deployment "${{ env.SOLO_DEPLOYMENT }}" --cluster-ref kind-${{ env.SOLO_CLUSTER_NAME }} --num-consensus-nodes 1
-          solo node keys --gossip-keys --tls-keys -i node1 --deployment "${{ env.SOLO_DEPLOYMENT }}"
-          solo cluster-ref setup --cluster-ref kind-"${SOLO_CLUSTER_NAME}" -s "${{ env.SOLO_CLUSTER_SETUP_NAMESPACE }}"
-          solo network deploy -i node1 --deployment "${{ env.SOLO_DEPLOYMENT }}"
-          solo node setup -i node1 --deployment "${{ env.SOLO_DEPLOYMENT }}" --local-build-path ./hedera-node/data
-          solo node start -i node1 --deployment "${{ env.SOLO_DEPLOYMENT }}"
-          solo mirror-node deploy --deployment "${{ env.SOLO_DEPLOYMENT }}" --cluster-ref kind-${{ env.SOLO_CLUSTER_NAME }} --pinger
+          solo cluster-ref connect --cluster-ref "kind-${SOLO_CLUSTER_NAME}" --context "kind-${SOLO_CLUSTER_NAME}"
+          solo deployment create -n "${SOLO_NAMESPACE}" --deployment "${SOLO_DEPLOYMENT}"
+          solo deployment add-cluster --deployment "${SOLO_DEPLOYMENT}" --cluster-ref "kind-${SOLO_CLUSTER_NAME}" --num-consensus-nodes 1
+          solo node keys --gossip-keys --tls-keys -i node1 --deployment "${SOLO_DEPLOYMENT}"
+          solo cluster-ref setup --cluster-ref "kind-${SOLO_CLUSTER_NAME}" -s "${SOLO_CLUSTER_SETUP_NAMESPACE}"
+          solo network deploy -i node1 --deployment "${SOLO_DEPLOYMENT}"
+          solo node setup -i node1 --deployment "${SOLO_DEPLOYMENT}" --local-build-path ./hedera-node/data
+          solo node start -i node1 --deployment "${SOLO_DEPLOYMENT}"
+          solo mirror-node deploy --deployment "${SOLO_DEPLOYMENT}" --cluster-ref "kind-${SOLO_CLUSTER_NAME}" --pinger
 
       # Perform mirror node regression tests
       - name: Execute mirror node acceptance tests
-        run: helm ls && helm test $(helm ls -q) --logs --timeout 30m
+        run: helm ls --kube-context "kind-${SOLO_CLUSTER_NAME}" && helm test $(helm ls -q --kube-context "kind-${SOLO_CLUSTER_NAME}") --logs --timeout 30m --kube-context "kind-${SOLO_CLUSTER_NAME}"
 
       # Collect run logs in a log file, ignore last job as it is the one that runs this workflow
       - name: Collect run logs in a log file
