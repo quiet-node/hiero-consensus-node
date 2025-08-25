@@ -20,7 +20,7 @@ public class OpsDurationDeterministicThrottle implements CongestibleThrottle {
     private final String throttleName;
     private final long capacityFreedPerSecond;
     private final DiscreteLeakyBucket bucket;
-    private Timestamp lastDecisionTime;
+    private Instant lastDecisionTime;
 
     public OpsDurationDeterministicThrottle(
             final String name, final long nominalCapacity, final long capacityFreedPerSecond) {
@@ -36,10 +36,9 @@ public class OpsDurationDeterministicThrottle implements CongestibleThrottle {
     public void useCapacity(@NonNull final Instant now, final long unitsToConsume) {
         final var elapsedNanos = nanosBetween(lastDecisionTime, now);
         if (elapsedNanos < 0L) {
-            throw new IllegalArgumentException("Throttle timeline must advance, but " + now + " is not after "
-                    + Instant.ofEpochSecond(lastDecisionTime.seconds(), lastDecisionTime.nanos()));
+            throw new IllegalArgumentException("Throttle timeline must advance, but " + now + " is not after " + now);
         }
-        lastDecisionTime = new Timestamp(now.getEpochSecond(), now.getNano());
+        lastDecisionTime = now;
 
         bucket.leak(effectiveLeak(elapsedNanos));
         bucket.useCapacity(Math.min(bucket.brimfulCapacityFree(), unitsToConsume));
@@ -95,12 +94,20 @@ public class OpsDurationDeterministicThrottle implements CongestibleThrottle {
     }
 
     public ThrottleUsageSnapshot usageSnapshot() {
-        return new ThrottleUsageSnapshot(bucket.capacityUsed(), lastDecisionTime);
+        return new ThrottleUsageSnapshot(
+                bucket.capacityUsed(),
+                lastDecisionTime == null
+                        ? null
+                        : new Timestamp(lastDecisionTime.getEpochSecond(), lastDecisionTime.getNano()));
     }
 
     public void resetUsageTo(@NonNull final ThrottleUsageSnapshot usageSnapshot) {
         requireNonNull(usageSnapshot);
-        lastDecisionTime = usageSnapshot.lastDecisionTime();
+        lastDecisionTime = usageSnapshot.lastDecisionTime() == null
+                ? null
+                : Instant.ofEpochSecond(
+                        usageSnapshot.lastDecisionTime().seconds(),
+                        usageSnapshot.lastDecisionTime().nanos());
         bucket.resetUsed(usageSnapshot.used());
     }
 

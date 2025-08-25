@@ -34,6 +34,7 @@ public class DiscreteLeakyBucket {
     private DiscreteLeakyBucket(long nominalCapacity, long brimfulCapacity) {
         assertArgument(nominalCapacity >= 0, "nominalCapacity must be >= 0");
         assertArgument(brimfulCapacity >= 0, "brimfulCapacity must be >= 0");
+        assertArgument(brimfulCapacity >= nominalCapacity, "brimfulCapacity must be >= nominalCapacity");
 
         used = 0L;
         this.nominalCapacity = nominalCapacity;
@@ -51,7 +52,7 @@ public class DiscreteLeakyBucket {
      * @return an absolute value of available brimful capacity. Returns 0 when full. Brimful capacity can't overfill.
      */
     public long brimfulCapacityFree() {
-        return Math.max(0, brimfulCapacity - used);
+        return brimfulCapacity - used;
     }
 
     /**
@@ -82,13 +83,16 @@ public class DiscreteLeakyBucket {
         assertArgument(units >= 0, "units to leak must be >= 0");
 
         long newUsed = used + units;
-        assertArgument(
-                newUsed >= 0 && newUsed <= brimfulCapacity,
-                "Can't use %d units. New value of %d would overflow the capacity of %d.",
-                units,
-                newUsed,
-                brimfulCapacity);
+        assertValidNewUsed(units, newUsed);
         used = newUsed;
+    }
+
+    void assertValidNewUsed(long units, long newUsed) {
+        if (newUsed < 0 || newUsed > brimfulCapacity) {
+            throw new IllegalArgumentException(String.format(
+                    "Can't use %d units. New value of %d would overflow the capacity of %d.",
+                    units, newUsed, brimfulCapacity));
+        }
     }
 
     /**
@@ -104,18 +108,16 @@ public class DiscreteLeakyBucket {
      * Sets used capacity to the given value. Throws IllegalArgumentException if the new value exceeds the brimful capacity.
      */
     public void resetUsed(long newUsed) {
-        assertArgument(
-                newUsed >= 0 && newUsed <= brimfulCapacity,
-                "Can't set used to %d units - it overflow the capacity of %d.",
-                newUsed,
-                brimfulCapacity);
-
+        if (newUsed < 0 || newUsed > brimfulCapacity) {
+            throw new IllegalArgumentException(String.format(
+                    "Can't set used to %d units - it overflows the capacity of %d.", newUsed, brimfulCapacity));
+        }
         this.used = newUsed;
     }
 
-    private static void assertArgument(boolean condition, String format, Object... args) {
+    private static void assertArgument(boolean condition, String message) {
         if (!condition) {
-            throw new IllegalArgumentException(String.format(format, args));
+            throw new IllegalArgumentException(message);
         }
     }
 }

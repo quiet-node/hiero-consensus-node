@@ -154,7 +154,7 @@ class DeterministicThrottleTest {
         final var result = subject.allow(1, now);
 
         assertTrue(result);
-        assertEquals(now, instantFrom(subject.lastDecisionTime()));
+        assertEquals(now, subject.lastDecisionTime());
         assertEquals(
                 internalCapacity - CAPACITY_UNITS_PER_TXN,
                 subject.delegate().bucket().brimfulCapacityFree());
@@ -205,7 +205,7 @@ class DeterministicThrottleTest {
         final var result = subject.allow(1, now);
 
         assertTrue(result);
-        assertEquals(now, instantFrom(subject.lastDecisionTime()));
+        assertEquals(now, subject.lastDecisionTime());
         assertEquals(
                 internalCapacity - 2 * CAPACITY_UNITS_PER_TXN + 1_000 * elapsedNanos,
                 subject.delegate().bucket().brimfulCapacityFree());

@@ -17,7 +17,7 @@ import java.time.Instant;
 public class LeakyBucketDeterministicThrottle implements CongestibleThrottle {
     private final String throttleName;
     private final LeakyBucketThrottle delegate;
-    private Timestamp lastDecisionTime;
+    private Instant lastDecisionTime;
 
     /**
      * Creates a new instance of the throttle with capacity - the total amount of gas allowed per
@@ -42,13 +42,13 @@ public class LeakyBucketDeterministicThrottle implements CongestibleThrottle {
     public boolean allow(@NonNull final Instant now, final long throttleLimit) {
         final var elapsedNanos = nanosBetween(lastDecisionTime, now);
         if (elapsedNanos < 0L) {
-            throw new IllegalArgumentException("Throttle timeline must advance, but " + now + " is not after "
-                    + Instant.ofEpochSecond(lastDecisionTime.seconds(), lastDecisionTime.nanos()));
+            throw new IllegalArgumentException(
+                    "Throttle timeline must advance, but " + now + " is not after " + lastDecisionTime);
         }
         if (throttleLimit < 0) {
             throw new IllegalArgumentException("Throttle limit must be non-negative, but was " + throttleLimit);
         }
-        lastDecisionTime = new Timestamp(now.getEpochSecond(), now.getNano());
+        lastDecisionTime = now;
         return delegate.allow(throttleLimit, elapsedNanos);
     }
 
@@ -158,21 +158,26 @@ public class LeakyBucketDeterministicThrottle implements CongestibleThrottle {
     }
 
     public ThrottleUsageSnapshot usageSnapshot() {
-        final var bucket = delegate.bucket();
-        return new ThrottleUsageSnapshot(bucket.capacityUsed(), lastDecisionTime);
+        return new ThrottleUsageSnapshot(
+                delegate.bucket().capacityUsed(),
+                lastDecisionTime == null
+                        ? null
+                        : new Timestamp(lastDecisionTime.getEpochSecond(), lastDecisionTime.getNano()));
     }
 
     public void resetUsageTo(@NonNull final ThrottleUsageSnapshot usageSnapshot) {
         requireNonNull(usageSnapshot);
-        final var bucket = delegate.bucket();
-        lastDecisionTime = usageSnapshot.lastDecisionTime();
-        bucket.resetUsed(usageSnapshot.used());
+        lastDecisionTime = usageSnapshot.lastDecisionTime() == null
+                ? null
+                : Instant.ofEpochSecond(
+                        usageSnapshot.lastDecisionTime().seconds(),
+                        usageSnapshot.lastDecisionTime().nanos());
+        delegate.bucket().resetUsed(usageSnapshot.used());
     }
 
     public void resetUsage() {
         resetLastAllowedUse();
-        final var bucket = delegate.bucket();
-        bucket.resetUsed(0);
+        delegate.bucket().resetUsed(0);
     }
 
     public void reclaimLastAllowedUse() {
