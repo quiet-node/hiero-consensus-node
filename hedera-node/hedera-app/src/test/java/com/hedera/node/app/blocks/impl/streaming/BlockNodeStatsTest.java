@@ -23,11 +23,11 @@ class BlockNodeStatsTest {
     @Test
     void test_endOfStream_exceededMaxPermitted() {
         final Instant now = Instant.now();
-        assertThat(blockNodeStats.hasExceededEndOfStreamLimit(now.minusSeconds(3), 2, Duration.ofSeconds(10L)))
+        assertThat(blockNodeStats.addEndOfStreamAndCheckLimit(now.minusSeconds(3), 2, Duration.ofSeconds(10L)))
                 .isFalse();
-        assertThat(blockNodeStats.hasExceededEndOfStreamLimit(now.minusSeconds(2), 2, Duration.ofSeconds(10L)))
+        assertThat(blockNodeStats.addEndOfStreamAndCheckLimit(now.minusSeconds(2), 2, Duration.ofSeconds(10L)))
                 .isFalse();
-        assertThat(blockNodeStats.hasExceededEndOfStreamLimit(now.minusSeconds(1), 2, Duration.ofSeconds(10L)))
+        assertThat(blockNodeStats.addEndOfStreamAndCheckLimit(now.minusSeconds(1), 2, Duration.ofSeconds(10L)))
                 .isTrue();
     }
 }

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.blocks.impl.streaming;
 
+import static java.util.Objects.requireNonNull;
+
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.Duration;
 import java.time.Instant;
@@ -20,14 +22,19 @@ public class BlockNodeStats {
     private final Queue<Instant> endOfStreamTimestamps = new ConcurrentLinkedQueue<>();
 
     /**
-     * Checks if the EndOfStream rate limit has been exceeded within the given timeframe.
+     * Adds a new EndOfStream event timestamp, prunes any old timestamps that are outside the time window,
+     * and then checks if the number of EndOfStream events exceeds the configured maximum.
+     *
      * @param timestamp the timestamp of the last EndOfStream response received
-     * @param maxAllowed maximum number of EndOfStream responses allowed
-     * @param timeFrame time window to check
-     * @return true if rate limit exceeded
+     * @param maxAllowed the maximum number of EndOfStream responses allowed in the time window
+     * @param timeFrame the time window for counting EndOfStream responses
+     * @return true if the number of EndOfStream responses exceeds the maximum, otherwise false
      */
-    public boolean hasExceededEndOfStreamLimit(
+    public boolean addEndOfStreamAndCheckLimit(
             @NonNull Instant timestamp, int maxAllowed, @NonNull Duration timeFrame) {
+        requireNonNull(timestamp, "timestamp must not be null");
+        requireNonNull(timeFrame, "timeFrame must not be null");
+
         // Add the current timestamp to the queue
         endOfStreamTimestamps.add(timestamp);
 

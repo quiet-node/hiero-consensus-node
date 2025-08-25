@@ -356,8 +356,9 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
                     blockNumber,
                     responseCode);
 
-            // Check if we've exceeded the EndOfStream rate limit using manager's persistent tracking
-            if (blockNodeConnectionManager.hasExceededEndOfStreamLimit(blockNodeConfig)) {
+            // Record the EndOfStream event and check if the rate limit has been exceeded.
+            // The connection manager maintains persistent stats for each node across connections.
+            if (blockNodeConnectionManager.recordEndOfStreamAndCheckLimit(blockNodeConfig)) {
                 final Duration scheduleDelay = blockNodeConnectionManager.getEndOfStreamScheduleDelay();
                 logger.warn(
                         "{} [{}] Block node has exceeded the allowed number of EndOfStream responses; "

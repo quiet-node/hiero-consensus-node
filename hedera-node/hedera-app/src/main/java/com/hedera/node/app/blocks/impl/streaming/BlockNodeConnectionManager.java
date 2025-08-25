@@ -30,8 +30,17 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.SortedMap;
+import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -384,8 +393,6 @@ public class BlockNodeConnectionManager {
         }
         requireNonNull(connection);
 
-        logger.warn("{} [{}] Connection intentionally performed reset of the stream", threadInfo(), connection);
-
         removeConnectionAndClearActive(connection);
 
         // Immediately try to find and connect to the next available node
@@ -680,22 +687,22 @@ public class BlockNodeConnectionManager {
     }
 
     /**
-     * Checks if the specified block node has exceeded the EndOfStream rate limit.
+     * Increments the count of EndOfStream responses for the specified block node
+     * and then checks if this new count exceeds the configured rate limit.
      *
      * @param blockNodeConfig the configuration for the block node
-     * @return true if rate limit exceeded
+     * @return true if the rate limit is exceeded, otherwise false
      */
-    public boolean hasExceededEndOfStreamLimit(@NonNull final BlockNodeConfig blockNodeConfig) {
+    public boolean recordEndOfStreamAndCheckLimit(@NonNull final BlockNodeConfig blockNodeConfig) {
         if (!isStreamingEnabled.get()) {
             return false;
         }
-
-        requireNonNull(blockNodeConfig);
+        requireNonNull(blockNodeConfig, "blockNodeConfig must not be null");
 
         final Instant now = Instant.now();
         final BlockNodeStats stats = nodeStats.computeIfAbsent(blockNodeConfig, k -> new BlockNodeStats());
 
-        return stats.hasExceededEndOfStreamLimit(now, maxEndOfStreamsAllowed, endOfStreamTimeFrame);
+        return stats.addEndOfStreamAndCheckLimit(now, maxEndOfStreamsAllowed, endOfStreamTimeFrame);
     }
 
     /**
@@ -978,6 +985,8 @@ public class BlockNodeConnectionManager {
                                 threadInfo(),
                                 currentActiveConnection,
                                 e);
+                    } finally {
+                        currentActiveConnection.getLock().unlock();
                     }
                 }
 
@@ -993,9 +1002,6 @@ public class BlockNodeConnectionManager {
                 } else {
                     // Another connection task has preempted this task... reschedule and try again
                     reschedule();
-                }
-                if (currentActiveConnection != null) {
-                    currentActiveConnection.getLock().unlock();
                 }
             } catch (final Exception e) {
                 logger.warn(
