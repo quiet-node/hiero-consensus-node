@@ -418,7 +418,7 @@ public class BlockNodeSuite {
                         blockNodeIds = {0, 1},
                         blockNodePriorities = {0, 1},
                         applicationPropertiesOverrides = {
-                            "blockNode.streamResetPeriod", "1m",
+                            "blockNode.streamResetPeriod", "10s",
                             "blockStream.streamMode", "BOTH",
                             "blockStream.writerMode", "FILE_AND_GRPC"
                         })
@@ -438,13 +438,13 @@ public class BlockNodeSuite {
                         Duration.of(30, SECONDS),
                         Duration.of(15, SECONDS),
                         String.format(
-                                "[localhost:%s/ACTIVE] Scheduled periodic stream reset every PT1M",
+                                "[localhost:%s/ACTIVE] Scheduled periodic stream reset every PT10S",
                                 portNumbers.getFirst()))),
                 waitUntilNextBlocks(6).withBackgroundTraffic(true),
                 sourcingContextual(spec -> assertHgcaaLogContainsTimeframe(
                         byNodeId(0),
                         connectionDropTime::get,
-                        Duration.of(90, SECONDS),
+                        Duration.of(30, SECONDS),
                         Duration.of(15, SECONDS),
                         // Verify that the periodic reset is performed after the period and the connection is closed
                         String.format(
