@@ -1,24 +1,22 @@
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.services.bdd.junit.support;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
-import org.junit.platform.commons.support.AnnotationSupport;
-import org.junit.platform.engine.TestSource;
-import org.junit.platform.engine.support.descriptor.ClassSource;
-import org.junit.platform.engine.support.descriptor.CompositeTestSource;
-import org.junit.platform.engine.support.descriptor.MethodSource;
-import org.junit.platform.launcher.TestIdentifier;
-import org.junit.platform.launcher.TestPlan;
-
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import org.junit.platform.commons.support.AnnotationSupport;
+import org.junit.platform.engine.TestSource;
+import org.junit.platform.engine.support.descriptor.ClassSource;
+import org.junit.platform.engine.support.descriptor.CompositeTestSource;
+import org.junit.platform.engine.support.descriptor.MethodSource;
+import org.junit.platform.launcher.TestPlan;
 
 public final class TestPlanUtils {
     private TestPlanUtils() {}
@@ -33,8 +31,8 @@ public final class TestPlanUtils {
      * - Nodes that do not expose a {@link MethodSource}, {@link ClassSource}, or
      *   {@link CompositeTestSource} are ignored.
      */
-    public static boolean hasAnnotatedTestNode(@NonNull final TestPlan plan,
-                                               @NonNull final Collection<Class<? extends Annotation>> annotationTypes) {
+    public static boolean hasAnnotatedTestNode(
+            @NonNull final TestPlan plan, @NonNull final Collection<Class<? extends Annotation>> annotationTypes) {
         final Set<Class<? extends Annotation>> types = new HashSet<>(annotationTypes);
         if (types.isEmpty()) {
             return false;
@@ -56,8 +54,8 @@ public final class TestPlanUtils {
     }
 
     // --- helpers ---
-    private static boolean sourceHasAnyAnnotation(@NonNull final TestSource source,
-                                                  @NonNull final Set<Class<? extends Annotation>> types) {
+    private static boolean sourceHasAnyAnnotation(
+            @NonNull final TestSource source, @NonNull final Set<Class<? extends Annotation>> types) {
         switch (source) {
             case MethodSource ms -> {
                 final var testClass = tryLoad(ms.getClassName());
@@ -95,8 +93,8 @@ public final class TestPlanUtils {
         }
     }
 
-    private static boolean isAnnotatedWithAny(@NonNull final AnnotatedElement element,
-                                              @NonNull final Set<Class<? extends Annotation>> types) {
+    private static boolean isAnnotatedWithAny(
+            @NonNull final AnnotatedElement element, @NonNull final Set<Class<? extends Annotation>> types) {
         for (final Class<? extends Annotation> type : types) {
             if (AnnotationSupport.isAnnotated(element, type)) {
                 return true;

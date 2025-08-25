@@ -9,7 +9,6 @@ import static com.hedera.services.bdd.spec.HapiPropertySource.inPriorityOrder;
 import static com.hedera.services.bdd.spec.keys.KeyFactory.KeyType;
 import static com.hedera.services.bdd.spec.keys.deterministic.Bip0032.mnemonicToEd25519Key;
 import static com.hedera.services.bdd.spec.transactions.TxnUtils.bytecodePath;
-import static java.util.Objects.requireNonNull;
 
 import com.esaulpaugh.headlong.abi.Address;
 import com.hedera.node.app.hapi.utils.CommonPbjConverters;
@@ -36,13 +35,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.security.PrivateKey;
-import java.security.Provider;
 import java.security.interfaces.ECPrivateKey;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.SplittableRandom;
 import java.util.function.Function;
@@ -157,9 +154,11 @@ public class HapiSpecSetup {
     }
 
     private <T extends PrivateKey> T payerKeyFromResource(@NonNull final Function<InputStream, T> reader) {
-        try (var in = Thread.currentThread().getContextClassLoader().getResourceAsStream(defaultPayerPemKeyResource())) {
+        try (var in =
+                Thread.currentThread().getContextClassLoader().getResourceAsStream(defaultPayerPemKeyResource())) {
             if (in == null) {
-                throw new IllegalArgumentException("No resource found for default payer key " + defaultPayerPemKeyResource());
+                throw new IllegalArgumentException(
+                        "No resource found for default payer key " + defaultPayerPemKeyResource());
             }
             return reader.apply(in);
         } catch (IOException e) {

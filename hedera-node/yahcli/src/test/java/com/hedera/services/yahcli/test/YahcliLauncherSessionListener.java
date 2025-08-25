@@ -1,23 +1,43 @@
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.services.yahcli.test;
+
+import static com.hedera.services.bdd.junit.hedera.utils.WorkingDirUtils.guaranteedExtantDir;
+import static com.hedera.services.bdd.junit.hedera.utils.WorkingDirUtils.rm;
+import static com.hedera.services.bdd.junit.support.TestPlanUtils.hasAnnotatedTestNode;
+import static java.util.Objects.requireNonNull;
 
 import com.hedera.services.bdd.junit.HapiTest;
 import com.hedera.services.bdd.junit.LeakyHapiTest;
 import com.hedera.services.bdd.junit.SharedNetworkLauncherSessionListener;
-import com.hedera.services.bdd.junit.support.TestPlanUtils;
+import com.hedera.services.bdd.junit.hedera.HederaNetwork;
+import com.hedera.services.bdd.junit.hedera.subprocess.SubProcessNetwork;
+import com.hedera.services.bdd.junit.hedera.subprocess.SubProcessNode;
+import com.hedera.services.yahcli.config.domain.GlobalConfig;
+import com.hedera.services.yahcli.config.domain.NetConfig;
+import com.hedera.services.yahcli.config.domain.NodeConfig;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Map;
+import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.platform.launcher.LauncherSession;
 import org.junit.platform.launcher.LauncherSessionListener;
 import org.junit.platform.launcher.TestExecutionListener;
 import org.junit.platform.launcher.TestPlan;
-
-import java.util.Set;
-
-import static com.hedera.services.bdd.junit.support.TestPlanUtils.hasAnnotatedTestNode;
+import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.nodes.Tag;
 
 public class YahcliLauncherSessionListener implements LauncherSessionListener {
     private static final Logger log = LogManager.getLogger(YahcliLauncherSessionListener.class);
+
+    private static final Path BASE_WORKING_DIR = Path.of("./build", "yahcli");
+    private static final String KEYS_DIR = "keys";
+    private static final String CONFIG_YML = "config.yml";
+    private static final String TEST_NETWORK = "hapi";
 
     @Override
     public void launcherSessionOpened(@NonNull final LauncherSession session) {
@@ -32,8 +52,65 @@ public class YahcliLauncherSessionListener implements LauncherSessionListener {
                 return;
             }
             SharedNetworkLauncherSessionListener.onSubProcessNetworkReady(network -> {
-                log.info("YahcliLauncherSessionListener: SubProcessNetwork is ready for Yahcli tests, {}", network.nodes());
+                writeYahcliConfigYml(network);
+                log.info(
+                        "YahcliLauncherSessionListener: SubProcessNetwork is ready for Yahcli tests, {}",
+                        network.nodes());
             });
         }
+    }
+
+    private static void writeYahcliConfigYml(@NonNull final HederaNetwork network) {
+        if (!(network instanceof SubProcessNetwork subProcessNetwork)) {
+            throw new IllegalStateException("Expected a SubProcessNetwork, got a " + network.getClass());
+        }
+        rm(BASE_WORKING_DIR);
+        final var keysDir =
+                guaranteedExtantDir(BASE_WORKING_DIR.resolve(TEST_NETWORK).resolve(KEYS_DIR));
+        try (final var in = Thread.currentThread().getContextClassLoader().getResourceAsStream("genesis.pem")) {
+            requireNonNull(in);
+            Files.copy(in, keysDir.resolve("account2.pem"));
+            Files.writeString(keysDir.resolve("account2.pass"), "swirlds");
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to write yahcli config", e);
+        }
+        final var netConfig = new NetConfig();
+        netConfig.setShard(subProcessNetwork.shard());
+        netConfig.setRealm(subProcessNetwork.realm());
+        netConfig.setDefaultPayer("2");
+        final var nodesConfig = subProcessNetwork.nodes().stream()
+                .map(SubProcessNode.class::cast)
+                .map(node -> {
+                    final var nodeConfig = new NodeConfig();
+                    nodeConfig.setId((int) node.getNodeId());
+                    nodeConfig.setShard(subProcessNetwork.shard());
+                    nodeConfig.setRealm(subProcessNetwork.realm());
+                    nodeConfig.setAccount(node.metadata().accountId().accountNumOrThrow());
+                    nodeConfig.setIpv4Addr(
+                            node.metadata().host() + ":" + node.metadata().grpcPort());
+                    return nodeConfig;
+                })
+                .toList();
+        netConfig.setNodes(nodesConfig);
+        netConfig.setDefaultNodeAccount((int) nodesConfig.getFirst().getAccount());
+        final var config = new GlobalConfig();
+        config.setNetworks(Map.of(TEST_NETWORK, netConfig));
+        config.setDefaultNetwork(TEST_NETWORK);
+
+        final var yamlOut = new Yaml();
+        final String doc;
+        try {
+            System.out.println("HERE");
+            doc = yamlOut.dumpAs(config, Tag.MAP, null);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        final var configPath = BASE_WORKING_DIR.resolve(CONFIG_YML);
+        try (final var writer = Files.newBufferedWriter(configPath)) {
+            writer.write(doc);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Could not write yahcli config to " + configPath.toAbsolutePath(), e);
+        }
+        YahcliOperation.setDefaultConfigLoc(configPath.toAbsolutePath().toString());
     }
 }

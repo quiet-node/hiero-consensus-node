@@ -32,7 +32,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.platform.launcher.LauncherSession;
@@ -98,14 +97,16 @@ public class SharedNetworkLauncherSessionListener implements LauncherSessionList
                 return;
             }
             // Do nothing if the test plan has no HapiTests of any kind
-            if (!hasAnnotatedTestNode(testPlan, Set.of(
-                    EmbeddedHapiTest.class,
-                    GenesisHapiTest.class,
-                    HapiTest.class,
-                    LeakyEmbeddedHapiTest.class,
-                    LeakyHapiTest.class,
-                    LeakyRepeatableHapiTest.class,
-                    RepeatableHapiTest.class))) {
+            if (!hasAnnotatedTestNode(
+                    testPlan,
+                    Set.of(
+                            EmbeddedHapiTest.class,
+                            GenesisHapiTest.class,
+                            HapiTest.class,
+                            LeakyEmbeddedHapiTest.class,
+                            LeakyHapiTest.class,
+                            LeakyRepeatableHapiTest.class,
+                            RepeatableHapiTest.class))) {
                 log.info("No HapiTests found in test plan, skipping shared network startup");
                 return;
             }

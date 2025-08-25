@@ -51,10 +51,6 @@ public class ConfigUtils {
         return entity;
     }
 
-    public static boolean isLiteral(String entity) {
-        return entity.startsWith("0.0.");
-    }
-
     public static Optional<File> keyFileFor(String keysLoc, String typedNum) {
         return keyFileAt(keysLoc + File.separator + typedNum);
     }

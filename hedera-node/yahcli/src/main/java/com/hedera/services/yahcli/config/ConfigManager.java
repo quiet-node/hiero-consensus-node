@@ -112,9 +112,12 @@ public class ConfigManager {
 
     private void addPayerConfig(Map<String, String> specConfig, String payerId) {
         specConfig.put("default.payer", payerId);
-        var optKeyFile = ConfigUtils.keyFileFor(keysLoc(), "account" + defaultPayer);
+        final var typedNum = "account" + defaultPayer;
+        var optKeyFile = ConfigUtils.keyFileFor(keysLoc(), typedNum);
         if (optKeyFile.isEmpty()) {
-            fail(String.format("No key available for account %s!", payerId));
+            fail(String.format(
+                    "No key available for account %s at '%s'",
+                    payerId, Paths.get(keysLoc() + File.separator + typedNum).toAbsolutePath()));
         }
         var keyFile = optKeyFile.get();
         if (keyFile.getAbsolutePath().endsWith("pem")) {

@@ -423,10 +423,15 @@ SHA-384 hash of this ZIP must be known so the nodes can validate the integrity o
 staging its artifacts for NMT to use.  This looks like,
 
 ```
+
 $ docker run -it -v $(pwd):/launch gcr.io/hedera-registry/yahcli:0.4.1 -n localhost -p 58 upgrade-telemetry \
+
 > --upgrade-zip-hash 8ec75ab44b6c8ccac4a6e7f7d77b5a66280cad8d8a86ed961975a3bea597613f83af9075f65786bf9101d50047ca768f \
 > --start-time 2022-01-01.00:00:00
-```
+>
+> ```
+>
+> ```
 
 # Scheduling a network freeze
 
