@@ -15,10 +15,18 @@ import java.time.ZoneId;
  * Utility methods for telemetry conversion.
  */
 public final class Utils {
-    static final String OPEN_TELEMETRY_SCHEMA_URL = "https://opentelemetry.io/schemas/1.0.0";
+    public static final String OPEN_TELEMETRY_SCHEMA_URL = "https://opentelemetry.io/schemas/1.0.0";
     private static final ZoneId UTC = ZoneId.of("UTC");
 
-    public static Bytes longToHashBytes(MessageDigest digest, long value) {
+    /**
+     * Create a 16 byte hash from a long value using the provided MessageDigest which should be a MD5 or other 128bit
+     * hash.
+     *
+     * @param digest the MessageDigest to use, should be MD5 or other 128bit hash
+     * @param value the long value to hash
+     * @return the 16 byte hash
+     */
+    public static Bytes longToHash16Bytes(MessageDigest digest, long value) {
         // Convert the long value to a byte array and update the digest
         return Bytes.wrap(digest.digest(longToByteArray(value)));
     }
@@ -31,8 +39,18 @@ public final class Utils {
         return bytes;
     }
 
-    public static Bytes longToBytes(long value) {
-        return Bytes.wrap(longToByteArray(value));
+    /**
+     * XXH3 64 bit hash to 8 bytes.
+     *
+     * @param val the value to hash
+     * @return the hash as 8 bytes
+     */
+    public static Bytes longToHash8Bytes(long val) {
+        val ^= Long.rotateLeft(val, 49) ^ Long.rotateLeft(val, 24);
+        val *= 0x9FB21C651E98DF25L;
+        val ^= (val >>> 35) + 8;
+        val *= 0x9FB21C651E98DF25L;
+        return Bytes.wrap(longToByteArray(val ^ (val >>> 28)));
     }
 
     /**

@@ -22,6 +22,8 @@ public class RoundInfo {
     private final List<RoundTraceInfo> executedTraces = new ArrayList<>();
     private final List<RoundTraceInfo> hashedTraces = new ArrayList<>();
     private final List<EventInfo> events = new ArrayList<>();
+    private final long roundStartTimeNanos;
+    private final long roundEndTimeNanos;
 
     public RoundInfo(final List<BlockItem> roundItems,
             final LongObjectHashMap<List<RoundTraceInfo>> roundTraces,
@@ -49,6 +51,18 @@ public class RoundInfo {
             if(eventItems != null) eventItems.add(item);
         }
         if (eventItems != null) events.add(new EventInfo(eventItems, eventTraces, transactionTraces));
+
+
+        // scan all transactions to find the earliest start time.
+        // If there are no transactions, use the earliest event created time.
+        // If there are no events, use the earliest round created time.
+        roundStartTimeNanos = createdTraces.stream()
+                .mapToLong(RoundTraceInfo::startTimeNanos)
+                .min().orElseThrow();
+        // find the oldest block creation time
+        roundEndTimeNanos = hashedTraces.stream()
+                .mapToLong(RoundTraceInfo::endTimeNanos)
+                .max().orElseThrow();
     }
 
     public long roundNumber() {
@@ -69,5 +83,13 @@ public class RoundInfo {
 
     public List<EventInfo> events() {
         return events;
+    }
+
+    public long roundStartTimeNanos() {
+        return roundStartTimeNanos;
+    }
+
+    public long roundEndTimeNanos() {
+        return roundEndTimeNanos;
     }
 }

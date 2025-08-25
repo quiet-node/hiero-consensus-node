@@ -21,41 +21,14 @@ public class BlockSpanCreator {
         try {
             // create a digest for creating trace ids
             final MessageDigest digest = MessageDigest.getInstance("MD5");
-            // create a trace id based on the block
-            final Bytes blockTraceID = Utils.longToHashBytes(digest, blockInfo.blockNum());
-//            for (int i = 0; i < items.size(); i++) {
-//                BlockItem item = items.get(i);
-//                if (item.hasRoundHeader()) {
-//                    // find all round trace info
-//                    // create a round span
-////                    TransactionTraceInfo txInfo = transactionTraces.get(item.transaction().hash());
-////                    if (txInfo != null) {
-////                        // create a span for the transaction
-////                        ScopeSpans.Builder txSpanBuilder = ScopeSpans.newBuilder()
-////                                .setScope("Transaction")
-////                                .setStartTime(txInfo.startTime())
-////                                .setEndTime(txInfo.endTime())
-////                                .putAttributes("transactionHash", item.transaction().hash());
-////                        spans.add(txSpanBuilder.build());
-////                    }
-//                } else if (item.hasEventHeader()) {
-//                    // create an event span
-////                    EventTraceInfo eventInfo = eventTraces.get(item.event().hash());
-////                    if (eventInfo != null) {
-////                        // create a span for the event
-////                        ScopeSpans.Builder eventSpanBuilder = ScopeSpans.newBuilder()
-////                                .setScope("Event")
-////                                .setStartTime(eventInfo.startTime())
-////                                .setEndTime(eventInfo.endTime())
-////                                .putAttributes("eventHash", item.event().hash());
-////                        spans.add(eventSpanBuilder.build());
-////                    }
-//                }
-//            }
+            // create a trace id and span id based on the block
+            final Bytes blockTraceID = Utils.longToHash16Bytes(digest, blockInfo.blockNum());
+            final Bytes blockSpanID = Utils.longToHash8Bytes(blockInfo.blockNum());
+            // create spans for each round in the block
             // create a span for the block
             final Span blockSpan = new Span(
                     blockTraceID, // 16 byte trace id
-                    Utils.longToBytes(blockInfo.blockNum()), // 8 byte span id
+                    blockSpanID, // 8 byte span id
                     null, // don't think we need to use trace state
                     null, // no parent span id
                     0, // TODO flags

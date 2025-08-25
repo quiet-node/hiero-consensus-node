@@ -3,7 +3,8 @@ package org.hiero.telemetryconverter;
 import static org.hiero.telemetryconverter.Utils.OPEN_TELEMETRY_SCHEMA_URL;
 
 import com.hedera.pbj.runtime.io.stream.WritableStreamingData;
-import io.opentelemetry.pbj.common.v1.InstrumentationScope;
+import io.opentelemetry.pbj.common.v1.AnyValue;
+import io.opentelemetry.pbj.common.v1.KeyValue;
 import io.opentelemetry.pbj.resource.v1.Resource;
 import io.opentelemetry.pbj.trace.v1.ResourceSpans;
 import io.opentelemetry.pbj.trace.v1.ScopeSpans;
@@ -189,12 +190,11 @@ public final class TelemetryConverter {
     private static void sendSpans(final List<Span> spans) {
 //        System.out.println("TelemetryConverter.sendSpans "+spans.size());
         ResourceSpans resourceSpans = new ResourceSpans(
-                Resource.newBuilder().build(),
+                Resource.newBuilder().attributes(
+                        KeyValue.newBuilder().key("cx.application.name").value(AnyValue.newBuilder().stringValue("hiero")).build(),
+                        KeyValue.newBuilder().key("service.name").value(AnyValue.newBuilder().stringValue("consensus-node")).build()
+                ).build(),
                 List.of(ScopeSpans.newBuilder()
-                        .scope(InstrumentationScope.newBuilder()
-                                .name("Hedera Block Stream")
-                                .version("0.65.0")
-                                .build())
                         .spans(spans)
                         .schemaUrl(OPEN_TELEMETRY_SCHEMA_URL)
                         .build()),
