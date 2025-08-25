@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.services.yahcli.commands.accounts;
 
-import static com.hedera.services.yahcli.output.CommonMessages.COMMON_MESSAGES;
 import static com.hedera.services.yahcli.suites.CreateSuite.NOVELTY;
 
 import com.hedera.services.bdd.spec.HapiSpec;
@@ -79,10 +78,10 @@ public class CreateCommand implements Callable<Integer> {
         var config = ConfigUtils.configFrom(yahcli);
 
         final var noveltyLoc = config.keysLoc() + File.separator + NOVELTY + ".pem";
-        final SigControl sigType = ParseUtils.keyTypeFromParam(keyType);
+        final SigControl sigType = ParseUtils.keyTypeFromParam(config.output(), keyType);
         // Since we are creating an account, we expect the caller to explicitly specify the key type
         if (!CreateSuite.existingKeyPresent(keyFile, passFile) && sigType == null) {
-            COMMON_MESSAGES.warn("Invalid key type: " + keyType + ". Must be 'ED25519' or 'SECP256K1'");
+            config.output().warn("Invalid key type: " + keyType + ". Must be 'ED25519' or 'SECP256K1'");
             return 1;
         }
         final var effectiveMemo = memo != null ? memo : "";
@@ -103,25 +102,27 @@ public class CreateCommand implements Callable<Integer> {
         delegate.runSuiteSync();
 
         if (delegate.getFinalSpecs().getFirst().getStatus() == HapiSpec.SpecStatus.PASSED) {
-            COMMON_MESSAGES.info("SUCCESS - account num="
-                    + delegate.getCreatedNo().get()
-                    + " has been created with balance "
-                    + amount
-                    + " tinybars"
-                    + ", signatureRequired "
-                    + effectiveReceiverSigRequired
-                    + " and memo '"
-                    + effectiveMemo
-                    + "'");
+            config.output()
+                    .info("SUCCESS - account num="
+                            + delegate.getCreatedNo().get()
+                            + " has been created with balance "
+                            + amount
+                            + " tinybars"
+                            + ", signatureRequired "
+                            + effectiveReceiverSigRequired
+                            + " and memo '"
+                            + effectiveMemo
+                            + "'");
         } else {
-            COMMON_MESSAGES.warn("FAILED to create a new account with "
-                    + amount
-                    + " tinybars "
-                    + ", signatureRequired "
-                    + effectiveReceiverSigRequired
-                    + " and memo '"
-                    + effectiveMemo
-                    + "'");
+            config.output()
+                    .warn("FAILED to create a new account with "
+                            + amount
+                            + " tinybars "
+                            + ", signatureRequired "
+                            + effectiveReceiverSigRequired
+                            + " and memo '"
+                            + effectiveMemo
+                            + "'");
             return 1;
         }
 

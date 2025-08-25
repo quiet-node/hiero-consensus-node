@@ -19,6 +19,7 @@ module com.hedera.node.yahcli {
     opens com.hedera.services.yahcli.commands.nodes to
             info.picocli;
 
+    exports com.hedera.services.yahcli.config.output;
     exports com.hedera.services.yahcli.config.domain;
     exports com.hedera.services.yahcli.config;
 
@@ -27,6 +28,7 @@ module com.hedera.node.yahcli {
     requires com.hedera.node.app;
     requires com.hedera.node.hapi;
     requires com.hedera.node.test.clients;
+    requires com.hedera.node.yahcli;
     requires org.hiero.base.utility;
     requires com.github.spotbugs.annotations;
     requires com.google.common;

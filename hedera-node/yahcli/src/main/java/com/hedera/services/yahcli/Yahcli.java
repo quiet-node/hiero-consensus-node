@@ -14,6 +14,7 @@ import com.hedera.services.yahcli.commands.system.FreezeUpgradeCommand;
 import com.hedera.services.yahcli.commands.system.PrepareUpgradeCommand;
 import com.hedera.services.yahcli.commands.system.TelemetryUpgradeCommand;
 import com.hedera.services.yahcli.commands.system.VersionInfoCommand;
+import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.concurrent.Callable;
 import org.apache.logging.log4j.Level;
 import picocli.CommandLine;
@@ -95,6 +96,11 @@ public class Yahcli implements Callable<Integer> {
     String workingDir;
 
     @Option(
+            names = {"-o", "--output-file"},
+            paramLabel = "output file for messages")
+    String outputFile;
+
+    @Option(
             names = {"-v", "--verbose"},
             paramLabel = "log level",
             description = "one of : WARN, INFO and DEBUG",
@@ -129,6 +135,10 @@ public class Yahcli implements Callable<Integer> {
 
     public String getWorkingDir() {
         return workingDir;
+    }
+
+    public @Nullable String getOutputFile() {
+        return outputFile;
     }
 
     public CommandSpec getSpec() {
