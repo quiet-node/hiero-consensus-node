@@ -6,4 +6,5 @@ module org.hiero.telemetryconverter {
     requires org.eclipse.collections.api;
     requires org.eclipse.collections.impl;
     requires jdk.jfr;
+    requires io.grpc.protobuf;
 }

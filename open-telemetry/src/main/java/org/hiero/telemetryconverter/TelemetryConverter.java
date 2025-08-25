@@ -52,8 +52,11 @@ public final class TelemetryConverter {
     private static final Path JFR_TRACE_FILE = PROJECT_ROOT.resolve("hedera-node/hedera-app/build/node/data/trace.jfr");
     private static final Path BLOCK_FILES_DIR = PROJECT_ROOT.resolve("hedera-node/hedera-app/build/node/data/blockStreams/block-0.0.3");
 
+    /** Cache of all round traces found in the JFR file, keyed by round number. */
     private static final LongObjectHashMap<RoundTraceInfo> roundTraces = new LongObjectHashMap<>();
+    /** Cache of all event traces found in the JFR file, keyed by event hash. */
     private static final IntObjectHashMap<EventTraceInfo> eventTraces = new IntObjectHashMap<>();
+    /** Cache of all transaction traces found in the JFR file, keyed by transaction hash. */
     private static final IntObjectHashMap<TransactionTraceInfo> transactionTraces = new IntObjectHashMap<>();
 
     public static void main(String[] args) throws IOException {
