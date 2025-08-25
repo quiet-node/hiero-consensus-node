@@ -21,7 +21,9 @@ public enum CommonMessages {
 
     public void printGlobalInfo(ConfigManager config) {
         final var payer = config.getDefaultPayer();
-        var msg = String.format("Targeting %s, paying with %d.%d.%d", config.getTargetName(), payer.getShardNum(), payer.getRealmNum(), payer.getAccountNum());
+        var msg = String.format(
+                "Targeting %s, paying with %d.%d.%d",
+                config.getTargetName(), payer.getShardNum(), payer.getRealmNum(), payer.getAccountNum());
         System.out.println(msg);
     }
 

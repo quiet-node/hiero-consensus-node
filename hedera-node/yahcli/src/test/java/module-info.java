@@ -4,6 +4,7 @@ import org.junit.platform.launcher.LauncherSessionListener;
 
 module hiero.consensus.node.yahcli.test {
     requires com.hedera.common.nativesupport;
+    requires com.hedera.node.app.hapi.utils;
     requires com.hedera.node.hapi;
     requires com.hedera.node.test.clients;
     requires com.hedera.node.yahcli;

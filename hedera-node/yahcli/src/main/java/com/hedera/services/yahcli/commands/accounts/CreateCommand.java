@@ -6,7 +6,6 @@ import static com.hedera.services.yahcli.suites.CreateSuite.NOVELTY;
 
 import com.hedera.services.bdd.spec.HapiSpec;
 import com.hedera.services.bdd.spec.keys.SigControl;
-import com.hedera.services.bdd.suites.HapiSuite;
 import com.hedera.services.yahcli.config.ConfigUtils;
 import com.hedera.services.yahcli.suites.CreateSuite;
 import com.hedera.services.yahcli.util.ParseUtils;

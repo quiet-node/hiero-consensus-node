@@ -909,10 +909,7 @@ public class HapiSpec implements Runnable, Executable, LifecycleTest {
             final long shard = HapiPropertySource.getConfigShard();
             final long realm = HapiPropertySource.getConfigRealm();
             targetNetwork = RemoteNetwork.newRemoteNetwork(
-                    hapiSetup.nodes(shard, realm),
-                    clientsFor(hapiSetup, shard, realm),
-                    shard,
-                    realm);
+                    hapiSetup.nodes(shard, realm), clientsFor(hapiSetup, shard, realm), shard, realm);
         }
     }
 

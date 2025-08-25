@@ -146,10 +146,7 @@ public class HapiClients {
             requireNonNull(channel, "FATAL: Cannot continue without additional Netty channel");
             final long shard = node.getAccountId().shardNum();
             final long realm = node.getAccountId().realmNum();
-            existingPool.add(ChannelStubs.from(
-                    channel,
-                    new NodeConnectInfo(node.hapiSpecInfo(shard, realm)),
-                    false));
+            existingPool.add(ChannelStubs.from(channel, new NodeConnectInfo(node.hapiSpecInfo(shard, realm)), false));
         }
         stubSequences.putIfAbsent(channelUri, new AtomicInteger());
     }
@@ -212,12 +209,7 @@ public class HapiClients {
      */
     public FileServiceBlockingStub getFileSvcStub(AccountID nodeId, boolean useTls, boolean asNodeOperator) {
         final var stubId = stubId(nodeId, useTls, asNodeOperator);
-        if (stubId == null) {
-            System.out.println("BOOP");
-        }
-        return nextStubsFromPool(stubId)
-                .fileSvcStubs()
-                .withDeadlineAfter(DEADLINE_SECS, TimeUnit.SECONDS);
+        return nextStubsFromPool(stubId).fileSvcStubs().withDeadlineAfter(DEADLINE_SECS, TimeUnit.SECONDS);
     }
 
     /**

@@ -12,12 +12,11 @@ import com.hedera.services.bdd.junit.SharedNetworkLauncherSessionListener;
 import com.hedera.services.bdd.junit.hedera.HederaNetwork;
 import com.hedera.services.bdd.junit.hedera.subprocess.SubProcessNetwork;
 import com.hedera.services.bdd.junit.hedera.subprocess.SubProcessNode;
-import com.hedera.services.bdd.junit.hedera.utils.WorkingDirUtils;
+import com.hedera.services.bdd.suites.HapiSuite;
 import com.hedera.services.yahcli.config.domain.GlobalConfig;
 import com.hedera.services.yahcli.config.domain.NetConfig;
 import com.hedera.services.yahcli.config.domain.NodeConfig;
 import edu.umd.cs.findbugs.annotations.NonNull;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -41,7 +40,6 @@ public class YahcliLauncherSessionListener implements LauncherSessionListener {
     private static final String SCOPE = "yahcli";
     private static final String KEYS_DIR = "keys";
     private static final String CONFIG_YML = "config.yml";
-    private static final String TEST_NETWORK = "hapi";
     private static final Path BASE_WORKING_DIR = Path.of(BUILD_DIR, SCOPE);
 
     @Override
@@ -62,6 +60,7 @@ public class YahcliLauncherSessionListener implements LauncherSessionListener {
                         "YahcliLauncherSessionListener: SubProcessNetwork is ready for Yahcli tests, {}",
                         network.nodes());
             });
+            HapiSuite.DEFAULT_TEARDOWN = false;
         }
     }
 
@@ -70,8 +69,8 @@ public class YahcliLauncherSessionListener implements LauncherSessionListener {
             throw new IllegalStateException("Expected a SubProcessNetwork, got a " + network.getClass());
         }
         rm(BASE_WORKING_DIR);
-        final var keysDir =
-                guaranteedExtantDir(BASE_WORKING_DIR.resolve(TEST_NETWORK).resolve(KEYS_DIR));
+        final var keysDir = guaranteedExtantDir(
+                BASE_WORKING_DIR.resolve(YahcliVerbs.TEST_NETWORK).resolve(KEYS_DIR));
         try (final var in = Thread.currentThread().getContextClassLoader().getResourceAsStream("genesis.pem")) {
             requireNonNull(in);
             Files.copy(in, keysDir.resolve("account2.pem"));
@@ -99,8 +98,8 @@ public class YahcliLauncherSessionListener implements LauncherSessionListener {
         netConfig.setNodes(nodesConfig);
         netConfig.setDefaultNodeAccount((int) nodesConfig.getFirst().getAccount());
         final var config = new GlobalConfig();
-        config.setNetworks(Map.of(TEST_NETWORK, netConfig));
-        config.setDefaultNetwork(TEST_NETWORK);
+        config.setNetworks(Map.of(YahcliVerbs.TEST_NETWORK, netConfig));
+        config.setDefaultNetwork(YahcliVerbs.TEST_NETWORK);
 
         final var yamlOut = new Yaml();
         final var doc = yamlOut.dumpAs(config, Tag.MAP, null);
@@ -110,7 +109,7 @@ public class YahcliLauncherSessionListener implements LauncherSessionListener {
         } catch (IOException e) {
             throw new UncheckedIOException("Could not write yahcli config to " + configPath.toAbsolutePath(), e);
         }
-        YahcliOperation.setDefaultConfigLoc(configPath.toAbsolutePath().toString());
-        YahcliOperation.setDefaultWorkingDir(BUILD_DIR + File.separator + SCOPE);
+        YahcliVerbs.setDefaultConfigLoc(configPath.toAbsolutePath().toString());
+        YahcliVerbs.setDefaultWorkingDir(BUILD_DIR + File.separator + SCOPE);
     }
 }
