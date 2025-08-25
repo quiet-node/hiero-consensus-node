@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.hapi.utils.throttles;
 
+import static com.hedera.hapi.util.HapiUtils.asInstant;
 import static com.hedera.node.app.hapi.utils.throttles.BucketThrottle.CAPACITY_UNITS_PER_NANO_TXN;
 import static com.hedera.node.app.hapi.utils.throttles.BucketThrottle.CAPACITY_UNITS_PER_TXN;
 import static com.hedera.node.app.hapi.utils.throttles.BucketThrottle.MTPS_PER_TPS;
@@ -291,7 +292,7 @@ class DeterministicThrottleTest {
         subject.resetUsageTo(snapshot);
 
         assertEquals(used, subject.delegate().bucket().capacityUsed());
-        assertEquals(originalDecision, subject.lastDecisionTime());
+        assertEquals(asInstant(originalDecision), subject.lastDecisionTime());
     }
 
     @Test
