@@ -12,10 +12,13 @@ import com.hedera.services.bdd.junit.SharedNetworkLauncherSessionListener;
 import com.hedera.services.bdd.junit.hedera.HederaNetwork;
 import com.hedera.services.bdd.junit.hedera.subprocess.SubProcessNetwork;
 import com.hedera.services.bdd.junit.hedera.subprocess.SubProcessNode;
+import com.hedera.services.bdd.junit.hedera.utils.WorkingDirUtils;
 import com.hedera.services.yahcli.config.domain.GlobalConfig;
 import com.hedera.services.yahcli.config.domain.NetConfig;
 import com.hedera.services.yahcli.config.domain.NodeConfig;
 import edu.umd.cs.findbugs.annotations.NonNull;
+
+import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
@@ -34,10 +37,12 @@ import org.yaml.snakeyaml.nodes.Tag;
 public class YahcliLauncherSessionListener implements LauncherSessionListener {
     private static final Logger log = LogManager.getLogger(YahcliLauncherSessionListener.class);
 
-    private static final Path BASE_WORKING_DIR = Path.of("./build", "yahcli");
+    private static final String BUILD_DIR = "build";
+    private static final String SCOPE = "yahcli";
     private static final String KEYS_DIR = "keys";
     private static final String CONFIG_YML = "config.yml";
     private static final String TEST_NETWORK = "hapi";
+    private static final Path BASE_WORKING_DIR = Path.of(BUILD_DIR, SCOPE);
 
     @Override
     public void launcherSessionOpened(@NonNull final LauncherSession session) {
@@ -98,13 +103,7 @@ public class YahcliLauncherSessionListener implements LauncherSessionListener {
         config.setDefaultNetwork(TEST_NETWORK);
 
         final var yamlOut = new Yaml();
-        final String doc;
-        try {
-            System.out.println("HERE");
-            doc = yamlOut.dumpAs(config, Tag.MAP, null);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        final var doc = yamlOut.dumpAs(config, Tag.MAP, null);
         final var configPath = BASE_WORKING_DIR.resolve(CONFIG_YML);
         try (final var writer = Files.newBufferedWriter(configPath)) {
             writer.write(doc);
@@ -112,5 +111,6 @@ public class YahcliLauncherSessionListener implements LauncherSessionListener {
             throw new UncheckedIOException("Could not write yahcli config to " + configPath.toAbsolutePath(), e);
         }
         YahcliOperation.setDefaultConfigLoc(configPath.toAbsolutePath().toString());
+        YahcliOperation.setDefaultWorkingDir(BUILD_DIR + File.separator + SCOPE);
     }
 }

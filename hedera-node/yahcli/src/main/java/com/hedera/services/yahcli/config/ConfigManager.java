@@ -45,6 +45,7 @@ public class ConfigManager {
     private String defaultPayer;
     private String defaultNodeAccount;
     private String targetName;
+    private String workingDir;
     private NetConfig targetNet;
 
     public ConfigManager(Yahcli yahcli, GlobalConfig global) {
@@ -182,7 +183,7 @@ public class ConfigManager {
     }
 
     public String keysLoc() {
-        return targetName + "/keys";
+        return workingDir + File.separator + targetName + File.separator + "keys";
     }
 
     public boolean useFixedFee() {
@@ -223,6 +224,7 @@ public class ConfigManager {
     }
 
     public void assertNoMissingDefaults() {
+        workingDir = yahcli.getWorkingDir();
         assertTargetNetIsKnown();
         assertDefaultPayerIsKnown();
         assertDefaultNodeAccountIsKnown();
@@ -305,6 +307,10 @@ public class ConfigManager {
 
     public String getTargetName() {
         return targetName;
+    }
+
+    public String getWorkingDir() {
+        return workingDir;
     }
 
     public ShardID shard() {

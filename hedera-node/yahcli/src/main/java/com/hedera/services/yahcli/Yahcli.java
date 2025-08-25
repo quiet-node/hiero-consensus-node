@@ -89,6 +89,12 @@ public class Yahcli implements Callable<Integer> {
     String configLoc;
 
     @Option(
+            names = {"-w", "--working-dir"},
+            paramLabel = "working directory",
+            defaultValue = ".")
+    String workingDir;
+
+    @Option(
             names = {"-v", "--verbose"},
             paramLabel = "log level",
             description = "one of : WARN, INFO and DEBUG",
@@ -119,6 +125,10 @@ public class Yahcli implements Callable<Integer> {
 
     public String getConfigLoc() {
         return configLoc;
+    }
+
+    public String getWorkingDir() {
+        return workingDir;
     }
 
     public CommandSpec getSpec() {

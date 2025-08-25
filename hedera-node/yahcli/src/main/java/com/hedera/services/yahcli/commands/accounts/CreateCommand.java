@@ -103,13 +103,12 @@ public class CreateCommand implements Callable<Integer> {
                 passFile);
         delegate.runSuiteSync();
 
-        if (delegate.getFinalSpecs().get(0).getStatus() == HapiSpec.SpecStatus.PASSED) {
-            COMMON_MESSAGES.info("SUCCESS - account "
-                    + HapiSuite.DEFAULT_SHARD_REALM
-                    + +delegate.getCreatedNo().get()
+        if (delegate.getFinalSpecs().getFirst().getStatus() == HapiSpec.SpecStatus.PASSED) {
+            COMMON_MESSAGES.info("SUCCESS - account num="
+                    + delegate.getCreatedNo().get()
                     + " has been created with balance "
                     + amount
-                    + " tinybars "
+                    + " tinybars"
                     + ", signatureRequired "
                     + effectiveReceiverSigRequired
                     + " and memo '"

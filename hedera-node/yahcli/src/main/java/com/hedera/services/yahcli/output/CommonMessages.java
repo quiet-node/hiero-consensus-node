@@ -20,12 +20,8 @@ public enum CommonMessages {
     }
 
     public void printGlobalInfo(ConfigManager config) {
-        var msg = String.format("Targeting %s, paying with %s", config.getTargetName(), config.getDefaultPayer());
-        System.out.println(msg);
-    }
-
-    public void beginBanner(String marker, String name) {
-        var msg = marker + " BEGINNING " + name + " " + marker;
+        final var payer = config.getDefaultPayer();
+        var msg = String.format("Targeting %s, paying with %d.%d.%d", config.getTargetName(), payer.getShardNum(), payer.getRealmNum(), payer.getAccountNum());
         System.out.println(msg);
     }
 

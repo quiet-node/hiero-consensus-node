@@ -26,6 +26,34 @@ public class NodeConnectInfo {
     private final int tlsPort;
     private final AccountID account;
 
+    public NodeConnectInfo(String inString, long shard, long realm) {
+        String[] aspects = inString.split(":");
+        int[] ports = Stream.of(aspects)
+                .filter(TxnUtils::isNumericLiteral)
+                .mapToInt(Integer::parseInt)
+                .toArray();
+        if (ports.length > 0) {
+            port = ports[0];
+        } else {
+            port = DEFAULT_PORT;
+        }
+        if (ports.length > 1) {
+            tlsPort = ports[1];
+        } else {
+            tlsPort = DEFAULT_TLS_PORT;
+        }
+
+        account = Stream.of(aspects)
+                .filter(TxnUtils::isIdLiteral)
+                .map(HapiPropertySource::asAccount)
+                .findAny()
+                .orElse(HapiPropertySource.asAccount(asEntityString(shard, realm, NEXT_DEFAULT_ACCOUNT_NUM++)));
+        host = Stream.of(aspects)
+                .filter(aspect -> !(isIdLiteral(aspect) || isNumericLiteral(aspect)))
+                .findAny()
+                .orElse(DEFAULT_HOST);
+    }
+
     public NodeConnectInfo(String inString) {
         String[] aspects = inString.split(":");
         int[] ports = Stream.of(aspects)
@@ -47,7 +75,7 @@ public class NodeConnectInfo {
                 .filter(TxnUtils::isIdLiteral)
                 .map(HapiPropertySource::asAccount)
                 .findAny()
-                .orElse(HapiPropertySource.asAccount(asEntityString(0, 0, NEXT_DEFAULT_ACCOUNT_NUM++)));
+                .orElseThrow();
         host = Stream.of(aspects)
                 .filter(aspect -> !(isIdLiteral(aspect) || isNumericLiteral(aspect)))
                 .findAny()

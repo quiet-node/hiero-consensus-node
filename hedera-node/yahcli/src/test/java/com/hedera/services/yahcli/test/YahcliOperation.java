@@ -20,23 +20,36 @@ import picocli.CommandLine;
  */
 public class YahcliOperation implements SpecOperation {
     private static final AtomicReference<String> DEFAULT_CONFIG_LOC = new AtomicReference<>();
+    private static final AtomicReference<String> DEFAULT_WORKING_DIR = new AtomicReference<>();
 
-    public static void setDefaultConfigLoc(@NonNull final String path) {
-        requireNonNull(path);
-        DEFAULT_CONFIG_LOC.set(requireNonNull(path));
+    public static void setDefaultConfigLoc(@NonNull final String s) {
+        requireNonNull(s);
+        DEFAULT_CONFIG_LOC.set(requireNonNull(s));
+    }
+
+    public static void setDefaultWorkingDir(@NonNull final String s) {
+        requireNonNull(s);
+        DEFAULT_WORKING_DIR.set(requireNonNull(s));
     }
 
     private final String[] args;
 
     @Nullable
     private String configLoc;
+    @Nullable
+    private String workingDir;
 
     public YahcliOperation(@NonNull final String[] args) {
         this.args = requireNonNull(args);
     }
 
-    public YahcliOperation withConfig(@NonNull final String configLoc) {
+    public YahcliOperation withConfigLoc(@NonNull final String configLoc) {
         this.configLoc = requireNonNull(configLoc);
+        return this;
+    }
+
+    public YahcliOperation withWorkingDir(@NonNull final String workingDir) {
+        this.workingDir = requireNonNull(workingDir);
         return this;
     }
 
@@ -47,10 +60,7 @@ public class YahcliOperation implements SpecOperation {
 
     public static YahcliOperation yahcliAccounts(@NonNull final String... args) {
         requireNonNull(args);
-        final var newArgs = new String[args.length + 1];
-        newArgs[0] = "accounts";
-        System.arraycopy(args, 0, newArgs, 1, args.length);
-        return new YahcliOperation(newArgs);
+        return new YahcliOperation(prepend(args, "accounts"));
     }
 
     @Override
@@ -58,6 +68,11 @@ public class YahcliOperation implements SpecOperation {
         requireNonNull(spec);
         final var commandLine = new CommandLine(new Yahcli());
         var finalizedArgs = args;
+        if (!workingDirProvidedViaArgs()) {
+            final var w = Optional.ofNullable(workingDir).orElseGet(() -> requireNonNull(
+                    DEFAULT_WORKING_DIR.get(), "No default working dir set, and none provided via args"));
+            finalizedArgs = prepend(finalizedArgs, "-w", w);
+        }
         if (!configProvidedViaArgs()) {
             final var c = Optional.ofNullable(configLoc)
                     .orElseGet(() -> requireNonNull(
@@ -66,7 +81,7 @@ public class YahcliOperation implements SpecOperation {
         }
         final int rc = commandLine.execute(finalizedArgs);
         if (rc != 0) {
-            return Optional.of(Assertions.fail("Yahcli command failed with exit code " + rc));
+            return Optional.of(Assertions.fail("Yahcli command <<" + String.join(" ", finalizedArgs) + ">> failed with exit code " + rc));
         }
         return Optional.empty();
     }
@@ -78,6 +93,10 @@ public class YahcliOperation implements SpecOperation {
         System.arraycopy(ps, 0, newArgs, 0, ps.length);
         System.arraycopy(a, 0, newArgs, ps.length, a.length);
         return newArgs;
+    }
+
+    private boolean workingDirProvidedViaArgs() {
+        return argsInclude("-w") || argsInclude("--working-dir");
     }
 
     private boolean configProvidedViaArgs() {

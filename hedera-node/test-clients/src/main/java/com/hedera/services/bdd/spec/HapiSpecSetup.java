@@ -522,10 +522,10 @@ public class HapiSpecSetup {
         return props.get("node.details.name");
     }
 
-    public List<NodeConnectInfo> nodes() {
+    public List<NodeConnectInfo> nodes(long shard, long realm) {
         NodeConnectInfo.NEXT_DEFAULT_ACCOUNT_NUM = 3;
         return Stream.of(props.get("nodes").split(","))
-                .map(NodeConnectInfo::new)
+                .map(inString -> new NodeConnectInfo(inString, shard, realm))
                 .toList();
     }
 
