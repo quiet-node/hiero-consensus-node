@@ -2,7 +2,15 @@ package org.hiero.telemetryconverter;
 
 import static org.hiero.telemetryconverter.Utils.OPEN_TELEMETRY_SCHEMA_URL;
 
+import com.hedera.pbj.grpc.client.helidon.PbjGrpcClient;
+import com.hedera.pbj.grpc.client.helidon.PbjGrpcClientConfig;
+import com.hedera.pbj.runtime.grpc.GrpcClient;
+import com.hedera.pbj.runtime.grpc.ServiceInterface;
 import com.hedera.pbj.runtime.io.stream.WritableStreamingData;
+import io.helidon.common.tls.Tls;
+import io.helidon.webclient.api.WebClient;
+import io.opentelemetry.pbj.collector.trace.v1.ExportTraceServiceRequest;
+import io.opentelemetry.pbj.collector.trace.v1.TraceServiceInterface;
 import io.opentelemetry.pbj.common.v1.AnyValue;
 import io.opentelemetry.pbj.common.v1.KeyValue;
 import io.opentelemetry.pbj.resource.v1.Resource;
@@ -13,15 +21,14 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.time.ZoneId;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
-import jdk.jfr.consumer.RecordedEvent;
-import jdk.jfr.consumer.RecordingFile;
 import org.eclipse.collections.impl.map.mutable.primitive.IntObjectHashMap;
 import org.eclipse.collections.impl.map.mutable.primitive.LongObjectHashMap;
 import org.hiero.telemetryconverter.model.combined.BlockInfo;
@@ -44,6 +51,12 @@ import org.hiero.telemetryconverter.spancreators.BlockSpanCreator;
  */
 @SuppressWarnings("CallToPrintStackTrace")
 public final class TelemetryConverter {
+
+    private record Options(Optional<String> authority, String contentType) implements ServiceInterface.RequestOptions {}
+
+    public static final Options PROTO_OPTIONS =
+            new Options(Optional.empty(), ServiceInterface.RequestOptions.APPLICATION_GRPC);
+
     private static final ZoneId SERVER_TIMEZONE = ZoneId.systemDefault();
     private static final Path PROJECT_ROOT = Paths.get("").toAbsolutePath();
     private static final Path JFR_TRACE_DIR = PROJECT_ROOT.resolve("hedera-node/hedera-app/build/node/data/");
@@ -59,6 +72,10 @@ public final class TelemetryConverter {
     private static final IntObjectHashMap<List<TransactionTraceInfo>> transactionTraces = new IntObjectHashMap<>();
     /** Directory to write test output files to */
     private static final Path testOutputDir = PROJECT_ROOT.resolve("build/telemetry");
+
+    private static final TraceServiceInterface.TraceServiceClient traceClient = new TraceServiceInterface.TraceServiceClient(
+            createGrpcClient("http://localhost:5156"), PROTO_OPTIONS);
+
 
     public static void main(String[] args) throws IOException {
         System.out.println("TelemetryConverter.main "+Path.of("").toAbsolutePath().toString());
@@ -85,7 +102,14 @@ public final class TelemetryConverter {
         try (Stream<Path> jfrDirFiles = Files.walk(JFR_TRACE_DIR)) {
             jfrDirFiles
                     .filter(path -> Files.isRegularFile(path) && path.getFileName().toString().endsWith(".jfr"))
-                    .forEach(TelemetryConverter::readJfrFile);
+                    .forEach(jfrFile -> {
+                        try {
+                            JfrFileReader.readJfrFile(jfrFile, blockTraces, roundTraces, eventTraces, transactionTraces);
+                        } catch (Exception e) {
+                            System.err.printf("Error reading JFR file %s: %s%n", jfrFile, e.getMessage());
+                            e.printStackTrace();
+                        }
+                    });
         }
         // now read the block files and match them with the round traces
         try(Stream<Path> paths = java.nio.file.Files.walk(BLOCK_FILES_DIR)) {
@@ -110,95 +134,38 @@ public final class TelemetryConverter {
                     })
                     .filter(Objects::nonNull)
                     .map(BlockSpanCreator::createBlockSpans)
-                    .filter(Objects::nonNull)
-                    .forEach(TelemetryConverter::sendSpans);
+//                    .forEach(TelemetryConverter::sendSpans);
+                    .forEach(TelemetryConverter::printSpans);
         }
-    }
-
-    /**
-     * Read a single JFR file from single node and populate the roundTraces, eventTraces, and transactionTraces maps.
-     * <p>
-     * We expect the JFR file to have a name like "trace-node-25.jfr" where 25 is the node ID.
-     * </p>
-     * @param jfrFile the path to the JFR file
-     */
-    private static void readJfrFile(Path jfrFile) {
-        final String fileName = jfrFile.getFileName().toString();
-        final long nodeId = Long.parseLong(fileName.substring(fileName.indexOf("node-") + 5,fileName.indexOf(".jfr")));
-        System.out.printf("Reading JFR file: %s , nodeId:%d%n", jfrFile, nodeId);
-        try (var rf = new RecordingFile(jfrFile)) {
-            while (rf.hasMoreEvents()) {
-                final RecordedEvent e = rf.readEvent();
-                try {
-                    switch (e.getEventType().getName()) {
-                        case "consensus.Block" -> {
-                            final long blockNum = e.getLong("blockNumber");
-                            System.out.println("blockNum = " + blockNum);
-                            final int eventTypeOrdinal = e.getInt("eventType");
-                            final BlockTraceInfo blockTraceInfo = new BlockTraceInfo(nodeId, blockNum,
-                                    BlockTraceInfo.EventType.values()[eventTypeOrdinal],
-                                    Utils.instantToUnixEpocNanos(e.getStartTime()),
-                                    Utils.instantToUnixEpocNanos(e.getEndTime()));
-                            blockTraces.getIfAbsentPut(blockNum, ArrayList::new).add(blockTraceInfo);
-                        }
-                        case "consensus.Round" -> {
-                            final long roundNum = e.getLong("roundNum");
-                            final int eventTypeOrdinal = e.getInt("eventType");
-                            final RoundTraceInfo roundTraceInfo = new RoundTraceInfo(nodeId, roundNum,
-                                    RoundTraceInfo.EventType.values()[eventTypeOrdinal],
-                                    Utils.instantToUnixEpocNanos(e.getStartTime()),
-                                    Utils.instantToUnixEpocNanos(e.getEndTime()));
-                            roundTraces.getIfAbsentPut(roundNum, ArrayList::new).add(roundTraceInfo);
-                        }
-                        case "consensus.Event" -> {
-                            final int eventHash = e.getInt("eventHash");
-                            final int eventTypeOrdinal = e.getInt("eventType");
-                            final EventTraceInfo eventTraceInfo = new EventTraceInfo(nodeId, eventHash,
-                                    EventTraceInfo.EventType.values()[eventTypeOrdinal],
-                                    Utils.instantToUnixEpocNanos(e.getStartTime()),
-                                    Utils.instantToUnixEpocNanos(e.getEndTime()));
-                            eventTraces.getIfAbsentPut(eventHash, ArrayList::new).add(eventTraceInfo);
-                        }
-                        case "consensus.Transaction" -> {
-                            final int txHash = e.getInt("txHash");
-                            final int eventTypeOrdinal = e.getInt("eventType");
-                            final TransactionTraceInfo transactionTraceInfo = new TransactionTraceInfo(nodeId, txHash,
-                                    TransactionTraceInfo.EventType.values()[eventTypeOrdinal],
-                                    Utils.instantToUnixEpocNanos(e.getStartTime()),
-                                    Utils.instantToUnixEpocNanos(e.getEndTime()));
-                            transactionTraces.getIfAbsentPut(txHash, ArrayList::new).add(transactionTraceInfo);
-                        }
-                        // ignore other events
-                    }
-                } catch (Exception ex) {
-                    System.err.printf("Error processing event %s: %s -> %s%n", e.getEventType().getName(), ex.getMessage(), e);
-                }
-            }
-        } catch (IOException e) {
-            System.err.printf("Error reading JFR file %s: %s%n", jfrFile, e.getMessage());
-            e.printStackTrace();
-        }
-        final long numberOfRoundTraces = roundTraces.values().stream().mapToLong(List::size).sum();
-        final long numberOfEventTraces = eventTraces.values().stream().mapToLong(List::size).sum();
-        final long numberOfTransactionTraces = transactionTraces.values().stream().mapToLong(List::size).sum();
-        System.out.printf("    Finished reading JFR file: %s, found %,d round traces, %,d event traces, %,d transaction traces%n",
-                jfrFile, numberOfRoundTraces, numberOfEventTraces, numberOfTransactionTraces);
     }
 
     private static final AtomicLong spanIdCounter = new AtomicLong(0L);
 
-    private static void sendSpans(final List<Span> spans) {
-//        System.out.println("TelemetryConverter.sendSpans "+spans.size());
-        ResourceSpans resourceSpans = new ResourceSpans(
-                Resource.newBuilder().attributes(
-                        KeyValue.newBuilder().key("cx.application.name").value(AnyValue.newBuilder().stringValue("hiero")).build(),
-                        KeyValue.newBuilder().key("service.name").value(AnyValue.newBuilder().stringValue("consensus-node")).build()
-                ).build(),
+    private static ResourceSpans createResourceSpans(final List<Span> spans) {
+        return new ResourceSpans(
+//                Resource.newBuilder().attributes(
+//                        KeyValue.newBuilder().key("cx.application.name").value(AnyValue.newBuilder().stringValue("hiero")).build(),
+//                        KeyValue.newBuilder().key("service.name").value(AnyValue.newBuilder().stringValue("consensus-node")).build()
+//                ).build(),
+                Resource.newBuilder()
+                        .attributes(new KeyValue("service.name", AnyValue.newBuilder().stringValue("Hedera").build()))
+                        .build(),
                 List.of(ScopeSpans.newBuilder()
                         .spans(spans)
-                        .schemaUrl(OPEN_TELEMETRY_SCHEMA_URL)
                         .build()),
                 OPEN_TELEMETRY_SCHEMA_URL);
+    }
+
+    private static void sendSpans(final List<Span> spans) {
+        System.out.println("TelemetryConverter.sendSpans "+spans.size());
+        traceClient.Export(ExportTraceServiceRequest.newBuilder()
+                .resourceSpans(createResourceSpans(spans))
+                .build());
+    }
+
+    private static void printSpans(final List<Span> spans) {
+//        System.out.println("TelemetryConverter.sendSpans "+spans.size());
+        ResourceSpans resourceSpans = createResourceSpans(spans);
         // write json file
         try(WritableStreamingData out = new WritableStreamingData(Files.newOutputStream(
                 testOutputDir.resolve("spans"+spanIdCounter.incrementAndGet()+".json")))) {
@@ -206,6 +173,15 @@ public final class TelemetryConverter {
         } catch (IOException e) {
             System.err.printf("Error writing spans to file: %s%n", e.getMessage());
         }
+    }
+
+    private static GrpcClient createGrpcClient(String baseUri) {
+        final Tls tls = Tls.builder().enabled(false).build();
+        final WebClient webClient = WebClient.builder().baseUri(baseUri).tls(tls).build();
+        final PbjGrpcClientConfig config = new PbjGrpcClientConfig(
+                Duration.ofSeconds(10), tls, Optional.empty(), ServiceInterface.RequestOptions.APPLICATION_GRPC);
+
+        return new PbjGrpcClient(webClient, config);
     }
 
 }

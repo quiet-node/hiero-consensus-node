@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 plugins {
     id("org.hiero.gradle.module.library")
-    id("org.hiero.gradle.feature.protobuf")
     id("com.hedera.pbj.pbj-compiler") version "0.11.13"
 }
 
@@ -15,4 +14,8 @@ testModuleInfo {
     requires("org.junit.jupiter.api")
     requires("org.junit.jupiter.params")
     requires("org.assertj.core")
+}
+
+pbj {
+    generateTestClasses = false
 }

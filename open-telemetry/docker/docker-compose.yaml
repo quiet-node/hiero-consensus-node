@@ -47,17 +47,8 @@ services:
     command: [ "--config=/etc/otel-collector.yaml" ]
     volumes:
       - ./otel-collector/otel-collector.yaml:/etc/otel-collector.yaml
-    networks:
-      - observe-network
-
-  # Generate fake traces...
-  k6-tracing:
-    image: ghcr.io/grafana/xk6-client-tracing:v0.0.7
-    environment:
-      - ENDPOINT=otel-collector:4317 # try tempo:4317 directly without OTEL collector
-    restart: always
-    depends_on:
-      - otel-collector
+    ports:
+      - "5156:4317" # random 5156 port mapped to otlp grpc 4317
     networks:
       - observe-network
 

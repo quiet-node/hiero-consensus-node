@@ -7,4 +7,7 @@ module org.hiero.telemetryconverter {
     requires org.eclipse.collections.impl;
     requires jdk.jfr;
     requires io.grpc.protobuf;
+    requires com.hedera.pbj.grpc.client.helidon;
+    requires io.helidon.common.tls;
+    requires io.helidon.webclient.api;
 }
