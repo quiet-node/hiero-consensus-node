@@ -9,7 +9,7 @@ import com.hedera.node.app.blocks.BlockStreamManager;
 import com.hedera.node.app.blocks.BlockStreamModule;
 import com.hedera.node.app.blocks.InitialStateHash;
 import com.hedera.node.app.blocks.impl.BoundaryStateChangeListener;
-import com.hedera.node.app.blocks.impl.KVStateChangeListener;
+import com.hedera.node.app.blocks.impl.ImmediateStateChangeListener;
 import com.hedera.node.app.blocks.impl.streaming.BlockNodeConnectionManager;
 import com.hedera.node.app.components.IngestInjectionComponent;
 import com.hedera.node.app.config.BootstrapConfigProviderImpl;
@@ -35,6 +35,8 @@ import com.hedera.node.app.services.NodeRewardManager;
 import com.hedera.node.app.services.ServicesInjectionModule;
 import com.hedera.node.app.services.ServicesRegistry;
 import com.hedera.node.app.spi.AppContext;
+import com.hedera.node.app.spi.info.NetworkInfo;
+import com.hedera.node.app.spi.info.NodeInfo;
 import com.hedera.node.app.spi.records.RecordCache;
 import com.hedera.node.app.spi.throttle.Throttle;
 import com.hedera.node.app.state.HederaStateInjectionModule;
@@ -59,8 +61,6 @@ import com.swirlds.platform.system.InitTrigger;
 import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.system.state.notifications.AsyncFatalIssListener;
 import com.swirlds.state.lifecycle.StartupNetworks;
-import com.swirlds.state.lifecycle.info.NetworkInfo;
-import com.swirlds.state.lifecycle.info.NodeInfo;
 import dagger.BindsInstance;
 import dagger.Component;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -71,6 +71,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 import javax.inject.Provider;
 import javax.inject.Singleton;
+import org.hiero.consensus.transaction.TransactionPoolNexus;
 
 /**
  * The infrastructure used to implement the platform contract for a Hedera Services node.
@@ -187,6 +188,9 @@ public interface HederaInjectionComponent {
         Builder platform(Platform platform);
 
         @BindsInstance
+        Builder transactionPool(TransactionPoolNexus transactionPool);
+
+        @BindsInstance
         Builder self(NodeInfo self);
 
         @BindsInstance
@@ -211,7 +215,7 @@ public interface HederaInjectionComponent {
         Builder boundaryStateChangeListener(BoundaryStateChangeListener boundaryStateChangeListener);
 
         @BindsInstance
-        Builder kvStateChangeListener(KVStateChangeListener kvStateChangeListener);
+        Builder immediateStateChangeListener(ImmediateStateChangeListener immediateStateChangeListener);
 
         @BindsInstance
         Builder migrationStateChanges(List<StateChanges.Builder> migrationStateChanges);

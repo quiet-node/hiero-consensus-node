@@ -7,19 +7,20 @@ import static com.swirlds.platform.test.fixtures.state.TestingAppStateInitialize
 
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.node.state.roster.RosterEntry;
-import com.hedera.hapi.platform.event.StateSignatureTransaction;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.fcqueue.FCQueueStatistics;
 import com.swirlds.logging.legacy.payload.ApplicationFinishedPayload;
 import com.swirlds.merkle.map.MerkleMapMetrics;
 import com.swirlds.platform.ParameterProvider;
 import com.swirlds.platform.state.ConsensusStateEventHandler;
+import com.swirlds.platform.system.DefaultSwirldMain;
 import com.swirlds.platform.system.Platform;
-import com.swirlds.platform.system.SwirldMain;
 import com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer;
+import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.security.SignatureException;
 import java.util.List;
+import java.util.function.Function;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hiero.base.constructable.ClassConstructorPair;
@@ -33,7 +34,7 @@ import org.hiero.consensus.roster.RosterUtils;
  * <p>
  * Command line arguments: Seed(long), TransactionsPerNode(int)
  */
-public class MigrationTestingToolMain implements SwirldMain<MigrationTestingToolState> {
+public class MigrationTestingToolMain extends DefaultSwirldMain<MigrationTestingToolState> {
 
     private static final Logger logger = LogManager.getLogger(MigrationTestingToolMain.class);
 
@@ -150,7 +151,7 @@ public class MigrationTestingToolMain implements SwirldMain<MigrationTestingTool
 
                 final byte[] transactionData = generator.generateTransaction();
 
-                while (!platform.createTransaction(transactionData)) {
+                while (!getTransactionPool().submitApplicationTransaction(Bytes.wrap(transactionData))) {
                     Thread.sleep(100);
                 }
 
@@ -174,6 +175,17 @@ public class MigrationTestingToolMain implements SwirldMain<MigrationTestingTool
         return state;
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * FUTURE WORK: https://github.com/hiero-ledger/hiero-consensus-node/issues/19002
+     * </p>
+     */
+    @Override
+    public Function<VirtualMap, MigrationTestingToolState> stateRootFromVirtualMap() {
+        throw new UnsupportedOperationException();
+    }
+
     @Override
     public ConsensusStateEventHandler<MigrationTestingToolState> newConsensusStateEvenHandler() {
         return new MigrationTestToolConsensusStateEventHandler();
@@ -194,11 +206,5 @@ public class MigrationTestingToolMain implements SwirldMain<MigrationTestingTool
     @Override
     public SemanticVersion getSemanticVersion() {
         return semanticVersion;
-    }
-
-    @Override
-    @NonNull
-    public Bytes encodeSystemTransaction(final @NonNull StateSignatureTransaction transaction) {
-        return StateSignatureTransaction.PROTOBUF.toBytes(transaction);
     }
 }

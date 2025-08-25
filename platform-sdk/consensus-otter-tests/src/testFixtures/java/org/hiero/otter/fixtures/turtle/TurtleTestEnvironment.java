@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.List;
 import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -22,7 +23,7 @@ import org.hiero.otter.fixtures.Network;
 import org.hiero.otter.fixtures.TestEnvironment;
 import org.hiero.otter.fixtures.TimeManager;
 import org.hiero.otter.fixtures.TransactionGenerator;
-import org.hiero.otter.fixtures.logging.internal.InMemoryAppender;
+import org.hiero.otter.fixtures.logging.internal.InMemorySubscriptionManager;
 
 /**
  * A test environment for the Turtle framework.
@@ -32,15 +33,9 @@ import org.hiero.otter.fixtures.logging.internal.InMemoryAppender;
  */
 public class TurtleTestEnvironment implements TestEnvironment {
 
-    public static final Set<Capability> CAPABILITIES = Set.of();
     private static final Logger log = LogManager.getLogger(TurtleTestEnvironment.class);
 
-    static final String APP_NAME = "otter";
-    static final String SWIRLD_NAME = "123";
-
     static final Duration GRANULARITY = Duration.ofMillis(10);
-    static final Duration AVERAGE_NETWORK_DELAY = Duration.ofMillis(200);
-    static final Duration STANDARD_DEVIATION_NETWORK_DELAY = Duration.ofMillis(10);
 
     private final TurtleNetwork network;
     private final TurtleTransactionGenerator transactionGenerator;
@@ -89,6 +84,25 @@ public class TurtleTestEnvironment implements TestEnvironment {
     }
 
     /**
+     * Checks if the Turtle test environment supports the given capabilities.
+     *
+     * @param requiredCapabilities the list of capabilities required by the test
+     * @return {@code true} if the Turtle test environment supports the required capabilities, {@code false} otherwise
+     */
+    public static boolean supports(@NonNull final List<Capability> requiredCapabilities) {
+        return requiredCapabilities.isEmpty();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @NonNull
+    public Set<Capability> capabilities() {
+        return Set.of();
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
@@ -119,8 +133,8 @@ public class TurtleTestEnvironment implements TestEnvironment {
      * {@inheritDoc}
      */
     @Override
-    public void destroy() throws InterruptedException {
-        InMemoryAppender.reset();
+    public void destroy() {
+        InMemorySubscriptionManager.INSTANCE.reset();
         network.destroy();
         ConstructableRegistry.getInstance().reset();
         RuntimeObjectRegistry.reset();

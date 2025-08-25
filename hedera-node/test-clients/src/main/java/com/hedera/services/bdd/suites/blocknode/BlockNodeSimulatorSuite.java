@@ -51,30 +51,17 @@ public class BlockNodeSimulatorSuite {
                 @SubProcessNodeConfig(
                         nodeId = 0,
                         blockNodeIds = {0},
-                        blockNodePriorities = {0})
+                        blockNodePriorities = {0},
+                        applicationPropertiesOverrides = {
+                            "blockStream.streamMode", "BOTH",
+                            "blockStream.writerMode", "FILE_AND_GRPC"
+                        })
             })
     @Order(0)
     final Stream<DynamicTest> node0StreamingHappyPath() {
         return hapiTest(
-                burstOfTps(300, Duration.ofSeconds(600)),
+                waitUntilNextBlocks(100).withBackgroundTraffic(true),
                 assertHgcaaLogDoesNotContain(byNodeId(0), "ERROR", Duration.ofSeconds(5)));
-    }
-
-    @HapiTest
-    @HapiBlockNode(
-            networkSize = 1,
-            blockNodeConfigs = {@BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.SIMULATOR)},
-            subProcessNodeConfigs = {
-                @SubProcessNodeConfig(
-                        nodeId = 0,
-                        blockNodeIds = {0},
-                        blockNodePriorities = {0})
-            })
-    @Order(0)
-    final Stream<DynamicTest> node0StreamingBufferFull() {
-        return hapiTest(
-                waitUntilNextBlocks(10).withBackgroundTraffic(true),
-                waitUntilNextBlocks(10).withBackgroundTraffic(true));
     }
 
     @HapiTest
@@ -89,19 +76,35 @@ public class BlockNodeSimulatorSuite {
                 @SubProcessNodeConfig(
                         nodeId = 0,
                         blockNodeIds = {0},
-                        blockNodePriorities = {0}),
+                        blockNodePriorities = {0},
+                        applicationPropertiesOverrides = {
+                            "blockStream.streamMode", "BOTH",
+                            "blockStream.writerMode", "FILE_AND_GRPC"
+                        }),
                 @SubProcessNodeConfig(
                         nodeId = 1,
                         blockNodeIds = {1},
-                        blockNodePriorities = {0}),
+                        blockNodePriorities = {0},
+                        applicationPropertiesOverrides = {
+                            "blockStream.streamMode", "BOTH",
+                            "blockStream.writerMode", "FILE_AND_GRPC"
+                        }),
                 @SubProcessNodeConfig(
                         nodeId = 2,
                         blockNodeIds = {2},
-                        blockNodePriorities = {0}),
+                        blockNodePriorities = {0},
+                        applicationPropertiesOverrides = {
+                            "blockStream.streamMode", "BOTH",
+                            "blockStream.writerMode", "FILE_AND_GRPC"
+                        }),
                 @SubProcessNodeConfig(
                         nodeId = 3,
                         blockNodeIds = {3},
-                        blockNodePriorities = {0}),
+                        blockNodePriorities = {0},
+                        applicationPropertiesOverrides = {
+                            "blockStream.streamMode", "BOTH",
+                            "blockStream.writerMode", "FILE_AND_GRPC"
+                        }),
             })
     @Order(1)
     final Stream<DynamicTest> allNodesStreamingHappyPath() {
@@ -118,7 +121,11 @@ public class BlockNodeSimulatorSuite {
                 @SubProcessNodeConfig(
                         nodeId = 0,
                         blockNodeIds = {0},
-                        blockNodePriorities = {0})
+                        blockNodePriorities = {0},
+                        applicationPropertiesOverrides = {
+                            "blockStream.streamMode", "BOTH",
+                            "blockStream.writerMode", "FILE_AND_GRPC"
+                        })
             })
     @Order(2)
     final Stream<DynamicTest> node0StreamingBlockNodeConnectionDropsCanStreamGenesisBlock() {
@@ -156,7 +163,11 @@ public class BlockNodeSimulatorSuite {
                 @SubProcessNodeConfig(
                         nodeId = 0,
                         blockNodeIds = {0, 1, 2, 3},
-                        blockNodePriorities = {0, 1, 2, 3})
+                        blockNodePriorities = {0, 1, 2, 3},
+                        applicationPropertiesOverrides = {
+                            "blockStream.streamMode", "BOTH",
+                            "blockStream.writerMode", "FILE_AND_GRPC"
+                        })
             })
     @Order(3)
     final Stream<DynamicTest> node0StreamingBlockNodeConnectionDropsTrickle() {
@@ -178,6 +189,9 @@ public class BlockNodeSimulatorSuite {
                         Duration.of(10, SECONDS),
                         Duration.of(45, SECONDS),
                         String.format("[localhost:%s/ACTIVE] Stream encountered an error", portNumbers.getFirst()),
+                        String.format(
+                                "[localhost:%s/UNINITIALIZED] Cancelled periodic stream reset", portNumbers.getFirst()),
+                        // Select the next block node to connect to based on priorities
                         String.format("Selected block node localhost:%s for connection attempt", portNumbers.get(1)),
                         String.format("[localhost:%s/CONNECTING] Running connection task...", portNumbers.get(1)),
                         String.format(
@@ -185,6 +199,9 @@ public class BlockNodeSimulatorSuite {
                                 portNumbers.get(1)),
                         String.format(
                                 "[localhost:%s/ACTIVE] Connection state transitioned from PENDING to ACTIVE",
+                                portNumbers.get(1)),
+                        String.format(
+                                "[localhost:%s/ACTIVE] Scheduled periodic stream reset every PT1M",
                                 portNumbers.get(1)))),
                 waitUntilNextBlocks(10).withBackgroundTraffic(true),
                 doingContextual(spec -> connectionDropTime.set(Instant.now())),
@@ -195,6 +212,9 @@ public class BlockNodeSimulatorSuite {
                         Duration.of(10, SECONDS),
                         Duration.of(45, SECONDS),
                         String.format("[localhost:%s/ACTIVE] Stream encountered an error", portNumbers.get(1)),
+                        String.format(
+                                "[localhost:%s/UNINITIALIZED] Cancelled periodic stream reset", portNumbers.get(1)),
+                        // Select the next block node to connect to based on priorities
                         String.format("Selected block node localhost:%s for connection attempt", portNumbers.get(2)),
                         String.format("[localhost:%s/CONNECTING] Running connection task...", portNumbers.get(2)),
                         String.format(
@@ -202,6 +222,9 @@ public class BlockNodeSimulatorSuite {
                                 portNumbers.get(2)),
                         String.format(
                                 "[localhost:%s/ACTIVE] Connection state transitioned from PENDING to ACTIVE",
+                                portNumbers.get(2)),
+                        String.format(
+                                "[localhost:%s/ACTIVE] Scheduled periodic stream reset every PT1M",
                                 portNumbers.get(2)))),
                 waitUntilNextBlocks(10).withBackgroundTraffic(true),
                 doingContextual(spec -> connectionDropTime.set(Instant.now())),
@@ -212,6 +235,9 @@ public class BlockNodeSimulatorSuite {
                         Duration.of(10, SECONDS),
                         Duration.of(45, SECONDS),
                         String.format("[localhost:%s/ACTIVE] Stream encountered an error", portNumbers.get(2)),
+                        String.format(
+                                "[localhost:%s/UNINITIALIZED] Cancelled periodic stream reset", portNumbers.get(2)),
+                        // Select the next block node to connect to based on priorities
                         String.format("Selected block node localhost:%s for connection attempt", portNumbers.get(3)),
                         String.format("[localhost:%s/CONNECTING] Running connection task...", portNumbers.get(3)),
                         String.format(
@@ -219,6 +245,9 @@ public class BlockNodeSimulatorSuite {
                                 portNumbers.get(3)),
                         String.format(
                                 "[localhost:%s/ACTIVE] Connection state transitioned from PENDING to ACTIVE",
+                                portNumbers.get(3)),
+                        String.format(
+                                "[localhost:%s/ACTIVE] Scheduled periodic stream reset every PT1M",
                                 portNumbers.get(3)))),
                 waitUntilNextBlocks(10).withBackgroundTraffic(true),
                 doingContextual(spec -> connectionDropTime.set(Instant.now())),
@@ -235,6 +264,8 @@ public class BlockNodeSimulatorSuite {
                         String.format(
                                 "[localhost:%s/ACTIVE] Connection state transitioned from PENDING to ACTIVE",
                                 portNumbers.get(1)),
+                        String.format(
+                                "[localhost:%s/ACTIVE] Scheduled periodic stream reset every PT1M", portNumbers.get(1)),
                         String.format("[localhost:%s/ACTIVE] Closing connection...", portNumbers.get(3)),
                         String.format(
                                 "[localhost:%s/UNINITIALIZED] Connection state transitioned from ACTIVE to UNINITIALIZED",
@@ -257,11 +288,19 @@ public class BlockNodeSimulatorSuite {
                 @SubProcessNodeConfig(
                         nodeId = 0,
                         blockNodeIds = {0},
-                        blockNodePriorities = {0}),
+                        blockNodePriorities = {0},
+                        applicationPropertiesOverrides = {
+                            "blockStream.streamMode", "BOTH",
+                            "blockStream.writerMode", "FILE_AND_GRPC"
+                        }),
                 @SubProcessNodeConfig(
                         nodeId = 1,
                         blockNodeIds = {0},
-                        blockNodePriorities = {0})
+                        blockNodePriorities = {0},
+                        applicationPropertiesOverrides = {
+                            "blockStream.streamMode", "BOTH",
+                            "blockStream.writerMode", "FILE_AND_GRPC"
+                        })
             })
     @Order(4)
     final Stream<DynamicTest> twoNodesStreamingOneBlockNodeHappyPath() {
@@ -281,17 +320,23 @@ public class BlockNodeSimulatorSuite {
                 @SubProcessNodeConfig(
                         nodeId = 0,
                         blockNodeIds = {0, 1},
-                        blockNodePriorities = {0, 1})
+                        blockNodePriorities = {0, 1},
+                        applicationPropertiesOverrides = {
+                            "blockStream.streamMode", "BLOCKS",
+                            "blockStream.writerMode", "FILE_AND_GRPC"
+                        })
             })
     @Order(5)
     final Stream<DynamicTest> testProactiveBlockBufferAction() {
         // NOTE: com.hedera.node.app.blocks.impl.streaming MUST have DEBUG logging enabled
         final AtomicReference<Instant> timeRef = new AtomicReference<>();
         return hapiTest(
-                waitUntilNextBlocks(10).withBackgroundTraffic(true),
+                doingContextual(
+                        spec -> LockSupport.parkNanos(Duration.ofSeconds(20).toNanos())),
                 doingContextual(spec -> timeRef.set(Instant.now())),
                 blockNodeSimulator(0).updateSendingBlockAcknowledgements(false),
-                waitUntilNextBlocks(10).withBackgroundTraffic(true),
+                doingContextual(
+                        spec -> LockSupport.parkNanos(Duration.ofSeconds(20).toNanos())),
                 sourcingContextual(
                         spec -> assertHgcaaLogContainsTimeframe(
                                 byNodeId(0),
@@ -320,14 +365,19 @@ public class BlockNodeSimulatorSuite {
                 @SubProcessNodeConfig(
                         nodeId = 0,
                         blockNodeIds = {0},
-                        blockNodePriorities = {0})
+                        blockNodePriorities = {0},
+                        applicationPropertiesOverrides = {
+                            "blockStream.streamMode", "BLOCKS",
+                            "blockStream.writerMode", "FILE_AND_GRPC"
+                        })
             })
     @Order(6)
     final Stream<DynamicTest> testBlockBufferBackPressure() {
         final AtomicReference<Instant> timeRef = new AtomicReference<>();
 
         return hapiTest(
-                waitUntilNextBlocks(10).withBackgroundTraffic(true),
+                doingContextual(
+                        spec -> LockSupport.parkNanos(Duration.ofSeconds(20).toNanos())),
                 doingContextual(spec -> timeRef.set(Instant.now())),
                 blockNodeSimulator(0).shutDownImmediately(),
                 sourcingContextual(spec -> assertHgcaaLogContainsTimeframe(
@@ -351,6 +401,69 @@ public class BlockNodeSimulatorSuite {
                                 Duration.ofMinutes(6),
                                 "Buffer saturation is below or equal to the recovery threshold; back pressure will be disabled")),
                 waitForActive(byNodeId(0), Duration.ofSeconds(30)),
-                waitUntilNextBlocks(10).withBackgroundTraffic(true));
+                doingContextual(
+                        spec -> LockSupport.parkNanos(Duration.ofSeconds(20).toNanos())));
+    }
+
+    @HapiTest
+    @HapiBlockNode(
+            networkSize = 1,
+            blockNodeConfigs = {
+                @BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.SIMULATOR),
+                @BlockNodeConfig(nodeId = 1, mode = BlockNodeMode.SIMULATOR)
+            },
+            subProcessNodeConfigs = {
+                @SubProcessNodeConfig(
+                        nodeId = 0,
+                        blockNodeIds = {0, 1},
+                        blockNodePriorities = {0, 1},
+                        applicationPropertiesOverrides = {
+                            "blockNode.streamResetPeriod", "1m",
+                            "blockStream.streamMode", "BOTH",
+                            "blockStream.writerMode", "FILE_AND_GRPC"
+                        })
+            })
+    @Order(7)
+    final Stream<DynamicTest> activeConnectionPeriodicallyRestarts() {
+        final AtomicReference<Instant> connectionDropTime = new AtomicReference<>(Instant.now());
+        final List<Integer> portNumbers = new ArrayList<>();
+        return hapiTest(
+                doingContextual(spec -> {
+                    portNumbers.add(spec.getBlockNodePortById(0));
+                    portNumbers.add(spec.getBlockNodePortById(1));
+                }),
+                sourcingContextual(spec -> assertHgcaaLogContainsTimeframe(
+                        byNodeId(0),
+                        connectionDropTime::get,
+                        Duration.of(30, SECONDS),
+                        Duration.of(15, SECONDS),
+                        String.format(
+                                "[localhost:%s/ACTIVE] Scheduled periodic stream reset every PT1M",
+                                portNumbers.getFirst()))),
+                burstOfTps(300, Duration.ofSeconds(60)),
+                sourcingContextual(spec -> assertHgcaaLogContainsTimeframe(
+                        byNodeId(0),
+                        connectionDropTime::get,
+                        Duration.of(90, SECONDS),
+                        Duration.of(15, SECONDS),
+                        // Verify that the periodic reset is performed after the period and the connection is closed
+                        String.format(
+                                "[localhost:%s/ACTIVE] Performing scheduled stream reset", portNumbers.getFirst()),
+                        String.format("[localhost:%s/ACTIVE] Closing connection...", portNumbers.getFirst()),
+                        String.format(
+                                "[localhost:%s/UNINITIALIZED] Connection state transitioned from ACTIVE to UNINITIALIZED",
+                                portNumbers.getFirst()),
+                        String.format(
+                                "[localhost:%s/UNINITIALIZED] Connection successfully closed", portNumbers.getFirst()),
+                        // Select the next block node to connect to based on priorities
+                        String.format("Selected block node localhost:%s for connection attempt", portNumbers.getLast()),
+                        String.format("[localhost:%s/CONNECTING] Running connection task...", portNumbers.getLast()),
+                        String.format(
+                                "[localhost:%s/PENDING] Connection state transitioned from CONNECTING to PENDING",
+                                portNumbers.getLast()),
+                        String.format(
+                                "[localhost:%s/ACTIVE] Connection state transitioned from PENDING to ACTIVE",
+                                portNumbers.getLast()))),
+                assertHgcaaLogDoesNotContain(byNodeId(0), "ERROR", Duration.ofSeconds(5)));
     }
 }

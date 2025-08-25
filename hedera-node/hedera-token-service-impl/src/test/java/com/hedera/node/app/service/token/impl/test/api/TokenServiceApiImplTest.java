@@ -25,7 +25,9 @@ import com.hedera.hapi.node.state.common.EntityNumber;
 import com.hedera.hapi.node.state.entity.EntityCounts;
 import com.hedera.hapi.node.state.token.Account;
 import com.hedera.hapi.node.token.CryptoTransferTransactionBody;
+import com.hedera.node.app.ids.EntityIdService;
 import com.hedera.node.app.ids.WritableEntityIdStore;
+import com.hedera.node.app.service.token.TokenService;
 import com.hedera.node.app.service.token.api.ContractChangeSummary;
 import com.hedera.node.app.service.token.fixtures.FakeFeeRecordBuilder;
 import com.hedera.node.app.service.token.impl.WritableAccountStore;
@@ -34,15 +36,15 @@ import com.hedera.node.app.service.token.impl.schemas.V0490TokenSchema;
 import com.hedera.node.app.service.token.impl.validators.StakingValidator;
 import com.hedera.node.app.spi.fees.Fees;
 import com.hedera.node.app.spi.ids.WritableEntityCounters;
+import com.hedera.node.app.spi.info.NetworkInfo;
 import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.extensions.test.fixtures.TestConfigBuilder;
-import com.swirlds.state.lifecycle.info.NetworkInfo;
 import com.swirlds.state.spi.WritableKVState;
 import com.swirlds.state.spi.WritableKVStateBase;
-import com.swirlds.state.spi.WritableSingletonStateBase;
 import com.swirlds.state.spi.WritableStates;
+import com.swirlds.state.test.fixtures.FunctionWritableSingletonState;
 import com.swirlds.state.test.fixtures.MapWritableKVState;
 import com.swirlds.state.test.fixtures.MapWritableStates;
 import java.util.ArrayList;
@@ -85,17 +87,19 @@ class TokenServiceApiImplTest {
             .build();
 
     private final WritableKVState<Bytes, AccountID> aliasesState =
-            new MapWritableKVState<>(V0490TokenSchema.ALIASES_KEY);
+            new MapWritableKVState<>(TokenService.NAME, V0490TokenSchema.ALIASES_KEY);
     private final WritableKVState<AccountID, Account> accountState =
-            new MapWritableKVState<>(V0490TokenSchema.ACCOUNTS_KEY);
+            new MapWritableKVState<>(TokenService.NAME, V0490TokenSchema.ACCOUNTS_KEY);
     private final WritableStates writableStates = new MapWritableStates(Map.of(
             V0490TokenSchema.ACCOUNTS_KEY, accountState,
             V0490TokenSchema.ALIASES_KEY, aliasesState));
     private final WritableStates entityWritableStates = new MapWritableStates(Map.of(
             ENTITY_ID_STATE_KEY,
-            new WritableSingletonStateBase<>(ENTITY_ID_STATE_KEY, () -> EntityNumber.DEFAULT, c -> {}),
+            new FunctionWritableSingletonState<>(
+                    EntityIdService.NAME, ENTITY_ID_STATE_KEY, () -> EntityNumber.DEFAULT, c -> {}),
             ENTITY_COUNTS_KEY,
-            new WritableSingletonStateBase<>(ENTITY_COUNTS_KEY, () -> EntityCounts.DEFAULT, c -> {})));
+            new FunctionWritableSingletonState<>(
+                    EntityIdService.NAME, ENTITY_COUNTS_KEY, () -> EntityCounts.DEFAULT, c -> {})));
     private WritableAccountStore accountStore;
 
     @Mock

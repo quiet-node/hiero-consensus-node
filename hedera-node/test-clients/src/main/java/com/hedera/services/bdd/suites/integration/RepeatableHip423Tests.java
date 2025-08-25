@@ -86,7 +86,6 @@ import static com.hedera.services.bdd.spec.utilops.UtilVerbs.newKeyNamed;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.overriding;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.overridingAllOf;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.overridingThrottles;
-import static com.hedera.services.bdd.spec.utilops.UtilVerbs.overridingTwo;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.scheduledExecutionResult;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.sleepFor;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.sleepForSeconds;
@@ -132,6 +131,7 @@ import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.ACCOUNT_DELETE
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.BUSY;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.CONTRACT_REVERT_EXECUTED;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INNER_TRANSACTION_FAILED;
+import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INSUFFICIENT_ACCOUNT_BALANCE;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INVALID_ALIAS_KEY;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INVALID_FULL_PREFIX_SIGNATURE_FOR_PRECOMPILE;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INVALID_MAX_AUTO_ASSOCIATIONS;
@@ -1720,9 +1720,7 @@ public class RepeatableHip423Tests {
                         .hasKnownStatus(SCHEDULE_EXPIRY_IS_BUSY));
     }
 
-    @LeakyRepeatableHapiTest(
-            value = NEEDS_VIRTUAL_TIME_FOR_FAST_EXECUTION,
-            overrides = {"atomicBatch.isEnabled", "atomicBatch.maxNumberOfTransactions"})
+    @RepeatableHapiTest(value = NEEDS_VIRTUAL_TIME_FOR_FAST_EXECUTION)
     @DisplayName("Failing batch will trigger schedule")
     // BATCH_14
     final Stream<DynamicTest> failingBatchWillTriggerSchedule() {
@@ -1731,7 +1729,6 @@ public class RepeatableHip423Tests {
         final var schedule = "scheduledXfer";
         final var batchOperator = "batchOperator";
         return hapiTest(
-                overridingTwo("atomicBatch.isEnabled", "true", "atomicBatch.maxNumberOfTransactions", "50"),
                 cryptoCreate(batchOperator),
                 cryptoCreate(sender).balance(ONE_HBAR).via("createSender"),
                 cryptoCreate(receiver).balance(0L),
@@ -1744,7 +1741,8 @@ public class RepeatableHip423Tests {
                 sleepFor(8_000),
                 // trigger with failing batch
                 atomicBatch(cryptoTransfer(tinyBarsFromTo(sender, receiver, ONE_HUNDRED_HBARS))
-                                .batchKey(batchOperator))
+                                .batchKey(batchOperator)
+                                .hasKnownStatus(INSUFFICIENT_ACCOUNT_BALANCE))
                         .signedByPayerAnd(batchOperator)
                         .hasKnownStatus(INNER_TRANSACTION_FAILED),
                 // validate the result of the schedule
