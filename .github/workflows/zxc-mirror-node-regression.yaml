@@ -119,7 +119,7 @@ jobs:
 
       # Perform mirror node regression tests
       - name: Execute mirror node acceptance tests
-        run: helm ls --kube-context "kind-${SOLO_CLUSTER_NAME}" -n "${SOLO_NAMESPACE}" && helm test $(helm ls -q --kube-context "kind-${SOLO_CLUSTER_NAME}" -n "${SOLO_NAMESPACE}") --logs --timeout 30m --kube-context "kind-${SOLO_CLUSTER_NAME}" -n "${SOLO_NAMESPACE}"
+        run: helm test mirror --logs --timeout 30m --kube-context "kind-${SOLO_CLUSTER_NAME}" -n "${SOLO_NAMESPACE}"
 
       # Collect run logs in a log file, ignore last job as it is the one that runs this workflow
       - name: Collect run logs in a log file
