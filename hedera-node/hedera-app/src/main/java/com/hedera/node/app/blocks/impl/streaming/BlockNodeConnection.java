@@ -174,8 +174,8 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
      * Creates a new bidi request pipeline for this block node connection.
      */
     public void createRequestPipeline() {
+        stateLock.lock();
         try {
-            stateLock.lock();
             if (requestPipeline == null) {
                 requestPipeline = blockStreamPublishServiceClient.publishBlockStream(this);
                 updateConnectionState(ConnectionState.PENDING);
@@ -191,8 +191,8 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
      */
     public void updateConnectionState(@NonNull final ConnectionState newState) {
         requireNonNull(newState, "newState must not be null");
+        stateLock.lock();
         try {
-            stateLock.lock();
             final ConnectionState oldState = connectionState;
             connectionState = newState;
             logger.debug("{} [{}] Connection state transitioned from {} to {}", threadInfo(), this, oldState, newState);
@@ -225,8 +225,8 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
     }
 
     private void performStreamReset() {
+        stateLock.lock();
         try {
-            stateLock.lock();
             if (getConnectionState() == ConnectionState.ACTIVE) {
                 logger.debug("{} [{}] Performing scheduled stream reset", threadInfo(), this);
                 endTheStreamWith(RESET);
@@ -512,8 +512,8 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
 
         logger.debug("{} [{}] Sending PublishStreamRequest with EndStream Code : {}", threadInfo(), this, code);
         // Ensure sendRequest() and close() compound action is thread-safe
+        stateLock.lock();
         try {
-            stateLock.lock();
             sendRequest(endStream);
             close();
         } finally {
@@ -533,14 +533,14 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
     public void sendRequest(@NonNull final PublishStreamRequest request) {
         requireNonNull(request, "request must not be null");
 
+        stateLock.lock();
         try {
-            stateLock.lock();
             final ConnectionState state = getConnectionState();
             if (state == ConnectionState.ACTIVE && requestPipeline != null) {
                 logger.debug("{} [{}] Sending request with size {}B", threadInfo(), this, request.protobufSize());
                 requestPipeline.onNext(request);
-            } else if (state == ConnectionState.CLOSED) {
-                logger.debug("{} [{}] Ignoring request - connection is closed", threadInfo(), this);
+            } else {
+                logger.debug("{} [{}] Ignoring request - connection is not active", threadInfo(), this);
             }
         } finally {
             stateLock.unlock();
@@ -552,8 +552,8 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
      * failure in closing the connection, the error will be logged and not propagated back to the caller.
      */
     public void close() {
+        stateLock.lock();
         try {
-            stateLock.lock();
             logger.debug("{} [{}] Closing connection...", threadInfo(), this);
 
             closePipeline();
@@ -569,8 +569,8 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
     }
 
     private void closePipeline() {
+        stateLock.lock();
         try {
-            stateLock.lock();
             if (requestPipeline != null) {
                 logger.debug("{} [{}] Closing request pipeline for block node", threadInfo(), this);
                 streamShutdownInProgress.set(true);
@@ -672,8 +672,8 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
                 handleResendBlock(response.resendBlock());
             } else {
                 // Block doesn't exist, will need to close connection (state change)
+                stateLock.lock();
                 try {
-                    stateLock.lock();
                     if (getConnectionState() == ConnectionState.ACTIVE) {
                         handleResendBlock(response.resendBlock());
                     }
@@ -704,8 +704,8 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
         }
 
         // Handle the error - this will change state, so acquire write lock
+        stateLock.lock();
         try {
-            stateLock.lock();
             // Re-check state after acquiring write lock
             if (getConnectionState() == ConnectionState.ACTIVE || getConnectionState() == ConnectionState.PENDING) {
                 logger.warn("{} [{}] onError being handled", threadInfo(), this, error);
@@ -719,8 +719,8 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
 
     @Override
     public void onComplete() {
+        stateLock.lock();
         try {
-            stateLock.lock();
             if (getConnectionState() == ConnectionState.ACTIVE) {
                 if (streamShutdownInProgress.getAndSet(false)) {
                     logger.debug("{} [{}] Stream completed (stream close was in progress)", threadInfo(), this);
