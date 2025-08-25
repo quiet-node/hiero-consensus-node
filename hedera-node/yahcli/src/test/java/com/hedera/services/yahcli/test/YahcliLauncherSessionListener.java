@@ -13,6 +13,7 @@ import com.hedera.services.bdd.junit.hedera.HederaNetwork;
 import com.hedera.services.bdd.junit.hedera.subprocess.SubProcessNetwork;
 import com.hedera.services.bdd.junit.hedera.subprocess.SubProcessNode;
 import com.hedera.services.bdd.suites.HapiSuite;
+import com.hedera.services.yahcli.Yahcli;
 import com.hedera.services.yahcli.config.domain.GlobalConfig;
 import com.hedera.services.yahcli.config.domain.NetConfig;
 import com.hedera.services.yahcli.config.domain.NodeConfig;
@@ -24,8 +25,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Set;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.junit.platform.launcher.LauncherSession;
 import org.junit.platform.launcher.LauncherSessionListener;
 import org.junit.platform.launcher.TestExecutionListener;
@@ -33,9 +32,12 @@ import org.junit.platform.launcher.TestPlan;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.nodes.Tag;
 
+/**
+ * A {@link LauncherSessionListener} that, when the test plan includes subprocess {@link HapiTest}s,
+ * configures {@link Yahcli} to target the {@link SubProcessNetwork} spun up for the tests by writing
+ * a corresponding {@code config.yml} to the yahcli working directory.
+ */
 public class YahcliLauncherSessionListener implements LauncherSessionListener {
-    private static final Logger log = LogManager.getLogger(YahcliLauncherSessionListener.class);
-
     private static final String BUILD_DIR = "build";
     private static final String SCOPE = "yahcli";
     private static final String KEYS_DIR = "keys";

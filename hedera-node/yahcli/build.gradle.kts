@@ -56,7 +56,7 @@ tasks.test {
 }
 
 tasks.register<Test>("testSubprocess") {
-    useJUnitPlatform {}
+    useJUnitPlatform { includeTags("REGRESSION") }
 
     systemProperty("hapi.spec.initial.port", 25000)
     systemProperty("hapi.spec.default.shard", 11)

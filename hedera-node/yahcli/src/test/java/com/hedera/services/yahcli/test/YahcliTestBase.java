@@ -9,7 +9,7 @@ import org.junit.jupiter.api.BeforeEach;
 import picocli.CommandLine;
 
 public class YahcliTestBase {
-    public static final String REGRESSION = "Regression";
+    public static final String REGRESSION = "REGRESSION";
 
     // (FUTURE) Wrap System.out and System.err to capture _and display_ outputs
     private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();

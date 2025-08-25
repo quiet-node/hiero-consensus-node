@@ -28,15 +28,20 @@ public class YahcliKeysOperation extends AbstractYahcliOperation<YahcliKeysOpera
 
     @Override
     public Optional<Throwable> execFor(@NonNull HapiSpec spec) {
+        requireNonNull(spec);
         try {
-
+            final var keyFiles = readKeyFiles();
+            if (keyFilesCb != null) {
+                keyFilesCb.accept(keyFiles);
+            }
             return Optional.empty();
         } catch (Throwable t) {
             return Optional.of(t);
         }
     }
 
-    private void readKeyFiles() {
-        final var w = workingDirOrThrow();
+    private Map<EntityType, Set<Long>> readKeyFiles() {
+        // (FUTURE) Implement reading key files from the working directory
+        return Map.of();
     }
 }

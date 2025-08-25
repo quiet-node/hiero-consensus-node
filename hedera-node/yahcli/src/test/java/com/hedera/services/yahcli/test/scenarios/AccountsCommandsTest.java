@@ -23,7 +23,7 @@ public class AccountsCommandsTest {
     final Stream<DynamicTest> readmeAccountsCreateExample() {
         final var newAccountNum = new AtomicLong();
         return hapiTest(
-                // Create an account with yahcli
+                // Create an account with yahcli (fails if yahcli exits with a non-zero return code)
                 yahcliAccounts("create", "-d", "hbar", "-a", "1", "--memo", "Who danced between")
                         // Capture the new account number from the yahcli output
                         .exposingOutputTo(newAccountCapturer(newAccountNum::set)),
