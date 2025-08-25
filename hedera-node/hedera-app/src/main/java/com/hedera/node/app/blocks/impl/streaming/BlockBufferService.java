@@ -157,12 +157,6 @@ public class BlockBufferService {
             loadBufferFromDisk();
             scheduleNextWorkerTask();
         }
-
-        // Only start the pruning thread if gRPC streaming is enabled
-        if (grpcStreamingEnabled) {
-            loadBufferFromDisk();
-            scheduleNextWorkerTask();
-        }
     }
 
     /**

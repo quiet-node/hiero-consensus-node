@@ -476,7 +476,11 @@ public class BlockNodeSimulatorSuite {
                 @SubProcessNodeConfig(
                         nodeId = 0,
                         blockNodeIds = {0},
-                        blockNodePriorities = {0})
+                        blockNodePriorities = {0},
+                        applicationPropertiesOverrides = {
+                                "blockStream.streamMode", "BLOCKS",
+                                "blockStream.writerMode", "FILE_AND_GRPC"
+                        })
             })
     @Order(7)
     final Stream<DynamicTest> testBlockBufferDurability() {
