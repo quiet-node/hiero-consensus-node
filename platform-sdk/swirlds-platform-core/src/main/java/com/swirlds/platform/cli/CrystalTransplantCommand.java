@@ -100,7 +100,6 @@ public class CrystalTransplantCommand extends AbstractCommand {
         this.selfId = NodeId.of(selfId);
     }
 
-
     /**
      * This method is called after command line input is parsed.
      *
