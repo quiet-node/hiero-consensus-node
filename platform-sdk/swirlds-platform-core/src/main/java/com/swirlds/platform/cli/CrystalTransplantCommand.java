@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.cli;
 
+import static com.swirlds.common.io.utility.FileUtils.getAbsolutePath;
+import static com.swirlds.common.merkle.utility.MerkleUtils.rehashTree;
+import static com.swirlds.platform.builder.PlatformBuildConstants.DEFAULT_CONFIG_FILE_NAME;
+import static com.swirlds.platform.state.signed.StartupStateUtils.loadLatestState;
 import static com.swirlds.platform.util.BootstrapUtils.setupConstructableRegistry;
-import static com.swirlds.platform.util.BootstrapUtils.setupConstructableRegistryWithConfiguration;
-import static com.swirlds.virtualmap.constructable.ConstructableUtils.registerVirtualMapConstructables;
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.node.state.roster.Roster;
@@ -11,19 +14,29 @@ import com.hedera.hapi.util.HapiUtils;
 import com.hedera.node.internal.network.Network;
 import com.hedera.pbj.runtime.io.stream.ReadableStreamingData;
 import com.swirlds.base.time.Time;
+import com.swirlds.cli.PlatformCli;
 import com.swirlds.cli.utility.AbstractCommand;
+import com.swirlds.cli.utility.SubcommandOf;
+import com.swirlds.common.config.StateCommonConfig;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.io.filesystem.FileSystemManager;
+import com.swirlds.common.io.utility.FileUtils;
 import com.swirlds.common.io.utility.SimpleRecycleBin;
 import com.swirlds.common.merkle.crypto.MerkleCryptographyFactory;
 import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.api.ConfigurationBuilder;
+import com.swirlds.platform.ApplicationDefinition;
+import com.swirlds.platform.ApplicationDefinitionLoader;
 import com.swirlds.platform.cli.utils.HederaAppUtils;
+import com.swirlds.platform.config.PathsConfig;
 import com.swirlds.platform.state.SavedStateUtils;
 import com.swirlds.platform.state.service.PlatformStateFacade;
-import com.swirlds.platform.state.signed.StartupStateUtils;
+import com.swirlds.platform.state.snapshot.SavedStateInfo;
 import com.swirlds.platform.state.snapshot.SavedStateMetadata;
+import com.swirlds.platform.state.snapshot.SignedStateFilePath;
+import com.swirlds.platform.swirldapp.AppLoaderException;
+import com.swirlds.platform.swirldapp.SwirldAppLoader;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.Console;
 import java.io.IOException;
@@ -37,7 +50,7 @@ import java.util.Optional;
 import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.hiero.base.constructable.ConstructableRegistryException;
+import org.hiero.base.crypto.Hash;
 import org.hiero.consensus.model.node.NodeId;
 import org.hiero.consensus.roster.RosterComparator;
 import org.hiero.consensus.roster.RosterUtils;
@@ -47,8 +60,8 @@ import picocli.CommandLine;
         name = "crystal-transplant",
         mixinStandardHelpOptions = true,
         description = "Cast a crystallization spell preparing a node to load a transplanted state")
+@SubcommandOf(PlatformCli.class)
 public class CrystalTransplantCommand extends AbstractCommand {
-    public static final String MAIN_CLASS_NAME = "com.hedera.services.ServicesMain";
     /** The return code for a successful operation. */
     private static final int RETURN_CODE_SUCCESS = 0;
     /** The return code when the user does not confirm the prompt */
@@ -59,10 +72,10 @@ public class CrystalTransplantCommand extends AbstractCommand {
     /** Application properties file name */
     private static final String APPLICATION_PROPERTIES_FILE_NAME = "application.properties";
 
-    public static final String SWIRLD_NAME = "123";
+    public static final String DATA_CONFIG_OVERRIDE_NETWORK_JSON = "data/config/override-network.json";
 
     /** The path to the state to prepare for transplant. */
-    private Path statePath;
+    private Path sourceStatePath;
 
     private NodeId selfId;
     private Path networkOverrideFile;
@@ -75,24 +88,45 @@ public class CrystalTransplantCommand extends AbstractCommand {
 
     private PlatformContext platformContext;
     private Roster overrideRoster;
+    private Path targetNodePath = Paths.get("");
+
+    private SavedStateMetadata stateMetadata;
+    private Path targetStateDir;
 
     /**
      * Set the path to state to prepare for transplant.
      */
-    @CommandLine.Parameters(description = "The path to the state to load")
+    @CommandLine.Option(
+            names = {"-s", "--sourceStatePath"},
+            required = true,
+            description = "The path to the state to load")
     @SuppressWarnings("unused") // used by picocli
-    private void setStatePath(final Path statePath) {
-        this.statePath = pathMustExist(statePath.toAbsolutePath());
+    private void setSourceStatePath(final Path sourceStatePath) {
+        this.sourceStatePath = pathMustExist(sourceStatePath.toAbsolutePath());
     }
 
-    @CommandLine.Parameters(description = "The path to the network override file")
+    /**
+     * Set the path to state to prepare for transplant.
+     */
+    @CommandLine.Option(
+            names = {"-t", "--targetNodePath"},
+            description = "The path to target node's fs")
+    @SuppressWarnings("unused") // used by picocli
+    private void setTargetNodePath(final Path targetNodePath) {
+        this.targetNodePath = pathMustExist(targetNodePath.toAbsolutePath());
+    }
+
+    @CommandLine.Option(
+            names = {"-o", "--networkOverride"},
+            required = true,
+            description = "The path to the network override file")
     @SuppressWarnings("unused") // used by picocli
     private void setNetworkOverrideFile(final Path networkOverrideFile) {
         this.networkOverrideFile = pathMustExist(networkOverrideFile.toAbsolutePath());
     }
 
     @CommandLine.Option(
-            names = {"-i", "--id"},
+            names = {"-i", "--selfId"},
             required = true,
             description = "The ID of the target node")
     @SuppressWarnings("unused") // used by picocli
@@ -107,6 +141,12 @@ public class CrystalTransplantCommand extends AbstractCommand {
      */
     @Override
     public Integer call() throws IOException {
+        askIfContinue(String.format(
+                "Start migration process for selfId: %s using networkOverride:%s sourceStatePath:%s and targetNodePath:%s",
+                selfId,
+                networkOverrideFile.toAbsolutePath(),
+                sourceStatePath.toAbsolutePath(),
+                targetNodePath.toAbsolutePath()));
         final Configuration configuration =
                 ConfigurationBuilder.create().autoDiscoverExtensions().build();
 
@@ -140,13 +180,54 @@ public class CrystalTransplantCommand extends AbstractCommand {
     }
 
     private void printDiffsAndGetConfirmation() {
-        final var versionString = platformContext.getConfiguration().getValue(CONFIG_KEY);
+        final var versionString = platformContext.getConfiguration().getValue(CONFIG_KEY, "1.0.0");
         final var version = Optional.ofNullable(versionString)
                 .map(HapiUtils::fromString)
                 .orElse(SemanticVersion.newBuilder().major(1).build());
 
-        final Roster stateRoster = getStateRoster(version);
-        System.out.println(RosterComparator.compare(stateRoster, this.overrideRoster));
+        final PathsConfig defaultPathsConfig =
+                platformContext.getConfiguration().getConfigData(PathsConfig.class);
+
+        final ApplicationDefinition appDefinition =
+                ApplicationDefinitionLoader.loadDefault(defaultPathsConfig, getAbsolutePath(DEFAULT_CONFIG_FILE_NAME));
+
+        final StateInformation sourceStateInfo = loadSourceStateInformation(appDefinition, version);
+        System.out.println(RosterComparator.compare(sourceStateInfo.roster, this.overrideRoster));
+        askIfContinue(String.format(
+                "The state trying to migrate is on round: %d and has hash: %s %n",
+                sourceStateInfo.round, sourceStateInfo.hash));
+        final Path targetNetworkOverrideDir = targetNodePath.resolve(DATA_CONFIG_OVERRIDE_NETWORK_JSON);
+        askIfContinue("Copy network override file to location: " + targetNetworkOverrideDir);
+        try {
+            if (!targetNetworkOverrideDir.toFile().exists()) {
+                Files.createDirectories(targetNetworkOverrideDir);
+            }
+            Files.copy(networkOverrideFile, targetNetworkOverrideDir, REPLACE_EXISTING);
+        } catch (IOException e) {
+            System.err.printf("Unable to copy network override file for self-id %s. %s %n", selfId, e);
+            System.exit(RETURN_CODE_PROMPT_NO);
+        }
+
+        final var latest = sourceStateInfo.fileInfo.getDirectory();
+        final var stateConfig = platformContext.getConfiguration().getConfigData(StateCommonConfig.class);
+        targetStateDir = new SignedStateFilePath(stateConfig)
+                .getSignedStateDirectory(
+                        appDefinition.getMainClassName(), selfId, appDefinition.getSwirldName(), sourceStateInfo.round);
+        askIfContinue(String.format("Move state files from source dir: %s to target: %s %n", latest, targetStateDir));
+        try {
+            if (!targetStateDir.toFile().exists()) {
+                Files.createDirectories(targetStateDir);
+            }
+            FileUtils.moveDirectory(latest, targetStateDir);
+            stateMetadata = SavedStateMetadata.parse(targetStateDir.resolve(SavedStateMetadata.FILE_NAME));
+        } catch (IOException e) {
+            System.err.printf("Unable to move state files from:%s to:%s. %s %n", latest, targetStateDir, e);
+            System.exit(RETURN_CODE_PROMPT_NO);
+        }
+    }
+
+    private void askIfContinue(String message) {
+        System.out.println(message);
         if (!this.autoConfirm) {
             Console console = System.console();
             String keepGoing = "";
@@ -155,49 +236,59 @@ public class CrystalTransplantCommand extends AbstractCommand {
                     keepGoing = console.readLine("Continue? [Y/N]:");
                 } else {
                     // fallback for IDEs where System.console() is null
-                    System.out.print("Continue? [Y/N]:");
+                    System.out.println("Continue? [Y/N]:");
+                    System.out.flush();
                     keepGoing = new Scanner(System.in).nextLine();
                 }
             }
             if (!keepGoing.equalsIgnoreCase("Y")) {
-                System.exit(1);
+                System.exit(RETURN_CODE_PROMPT_NO);
             }
         }
     }
 
-    private Roster getStateRoster(final SemanticVersion version) {
+    private StateInformation loadSourceStateInformation(
+            final ApplicationDefinition appDefinition, final SemanticVersion version) {
         setupConstructableRegistry();
         try {
-            setupConstructableRegistryWithConfiguration(platformContext.getConfiguration());
-            registerVirtualMapConstructables(platformContext.getConfiguration());
-        } catch (ConstructableRegistryException e) {
+            SwirldAppLoader.loadSwirldApp(appDefinition.getMainClassName(), appDefinition.getAppJarPath());
+        } catch (final AppLoaderException e) {
+            System.err.printf("Could not load the application definition for self-id %s. %s %n", selfId, e);
             throw new RuntimeException(e);
         }
 
-        try (final var state = StartupStateUtils.loadStateFile(
+        final List<SavedStateInfo> savedStateFiles = SignedStateFilePath.getSavedStateFiles(sourceStatePath);
+
+        if (savedStateFiles.isEmpty()) {
+            System.out.printf("No state files found on %s %n", sourceStatePath);
+            System.exit(RETURN_CODE_PROMPT_NO);
+        }
+        try (final var state = loadLatestState(
                 new SimpleRecycleBin(),
-                NodeId.FIRST_NODE_ID,
-                MAIN_CLASS_NAME,
-                SWIRLD_NAME,
-                HederaAppUtils::createrNewMerkleNodeState,
                 version,
+                savedStateFiles,
+                HederaAppUtils::createrNewMerkleNodeState,
                 new PlatformStateFacade(),
                 platformContext)) {
-            final var rosterHistory =
-                    RosterUtils.createRosterHistory(state.get().getState());
-            return rosterHistory.getCurrentRoster();
+            final Hash newHash = rehashTree(
+                    platformContext.getMerkleCryptography(),
+                    state.get().getState().getRoot());
+            return new StateInformation(
+                    state.get().getRound(), state.get().getRoster(), newHash, savedStateFiles.getFirst());
         }
     }
+
+    record StateInformation(Long round, Roster roster, Hash hash, SavedStateInfo fileInfo) {}
 
     /**
      * If the state is not a freeze state, this method truncates the PCES files by removing events with future birth
      * rounds to make the state look like a freeze state
      */
     private void truncatePCESFilesIfNotAFreezeState() throws IOException {
-        final SavedStateMetadata stateMetadata =
-                SavedStateMetadata.parse(statePath.resolve(SavedStateMetadata.FILE_NAME));
+        askIfContinue("Truncate PCES files");
+
         if (stateMetadata.freezeState() == null || !stateMetadata.freezeState()) {
-            final int discardedEventCount = SavedStateUtils.prepareStateForTransplant(statePath, platformContext);
+            final int discardedEventCount = SavedStateUtils.prepareStateForTransplant(targetStateDir, platformContext);
             System.out.printf(
                     "PCES file truncation complete. %d events were discarded due to being from a future round.%n",
                     discardedEventCount);
@@ -206,7 +297,9 @@ public class CrystalTransplantCommand extends AbstractCommand {
         }
     }
 
-    private void copyPCESFilesToCorrectDirectory() {}
+    private void copyPCESFilesToCorrectDirectory() {
+        askIfContinue("Copy PCES files to correct directory");
+    }
 
     /**
      * Updates the application properties file by increasing the patch version of the configuration key's semantic
@@ -219,10 +312,10 @@ public class CrystalTransplantCommand extends AbstractCommand {
      * @throws IOException If the application properties file is missing or cannot be read or written.
      */
     private void performConfigBump() throws IOException {
+        askIfContinue("Perform config bumping");
         final Path propertiesPath = Paths.get(APPLICATION_PROPERTIES_FILE_NAME);
         if (Files.notExists(propertiesPath)) {
-            throw new IOException("application.properties not found in current working directory: "
-                    + propertiesPath.toAbsolutePath());
+            Files.createFile(propertiesPath.resolve(APPLICATION_PROPERTIES_FILE_NAME));
         }
 
         final List<String> lines = Files.readAllLines(propertiesPath, StandardCharsets.UTF_8);
@@ -240,7 +333,7 @@ public class CrystalTransplantCommand extends AbstractCommand {
                 final SemanticVersion parsed = HapiUtils.fromString(originalValue);
                 final SemanticVersion bumped =
                         parsed.copyBuilder().patch(parsed.patch() + 1).build();
-                final String bumpedValue = HapiUtils.toString(bumped);
+                final String bumpedValue = HapiUtils.toString(bumped).replace("v", "");
                 final String newLine = line.substring(0, idx) + bumpedValue;
                 lines.set(i, newLine);
                 updated = true;
@@ -251,7 +344,8 @@ public class CrystalTransplantCommand extends AbstractCommand {
         if (!updated) {
             final SemanticVersion newVersion =
                     SemanticVersion.newBuilder().major(1).build();
-            lines.add(String.format("%s=%s", CONFIG_KEY, HapiUtils.toString(newVersion)));
+            lines.add(String.format(
+                    "%s=%s", CONFIG_KEY, HapiUtils.toString(newVersion).replace("v", "")));
         }
 
         Files.write(propertiesPath, lines, StandardCharsets.UTF_8);

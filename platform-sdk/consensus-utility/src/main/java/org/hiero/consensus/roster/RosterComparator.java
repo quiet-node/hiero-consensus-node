@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 package org.hiero.consensus.roster;
 
+import static java.util.Objects.requireNonNull;
+
 import com.hedera.hapi.node.state.roster.Roster;
 import com.hedera.hapi.node.state.roster.RosterEntry;
+import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.base.utility.Pair;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.List;
@@ -114,12 +117,15 @@ public class RosterComparator {
 
             if (!added.isEmpty()) {
                 report.append("\n--- ADDED ---\n");
-                added.forEach(entry -> report.append(entry).append("\n"));
+                added.stream().map(RosterEntry.JSON::toJSON).forEach(entry -> report.append(entry)
+                        .append("\n"));
             }
 
             if (!deleted.isEmpty()) {
                 report.append("\n--- DELETED ---\n");
-                deleted.forEach(entry -> report.append(entry.nodeId()).append("\n"));
+                report.append("Node IDs:")
+                        .append(deleted.stream().map(RosterEntry::nodeId).toList())
+                        .append("\n");
             }
 
             if (!modified.isEmpty()) {
@@ -134,16 +140,54 @@ public class RosterComparator {
                         report.append(String.format("  - weight: %d -> %d\n", oldE.weight(), newE.weight()));
                     }
                     if (!oldE.gossipCaCertificate().equals(newE.gossipCaCertificate())) {
-                        report.append("  - gossipCaCertificate: has been changed.\n");
+                        report.append("  - gossipCaCertificate: has changed\n");
                     }
                     if (!oldE.gossipEndpoint().equals(newE.gossipEndpoint())) {
-                        report.append(String.format(
-                                "  - gossipEndpoint: %s -> %s\n", oldE.gossipEndpoint(), newE.gossipEndpoint()));
+                        report.append("  - gossipEndpoint: \n");
+                        if (oldE.gossipEndpoint().size()
+                                != newE.gossipEndpoint().size()) {
+                            report.append(String.format(
+                                    "    -- size: %d -> %d",
+                                    oldE.gossipEndpoint().size(),
+                                    newE.gossipEndpoint().size()));
+                            if (newE.gossipEndpoint().size()
+                                    > oldE.gossipEndpoint().size()) {
+                                report.append(". Only first entry will be used.");
+                            }
+                            report.append("\n");
+                        }
+                        var oldEndpoint = oldE.gossipEndpoint().getFirst();
+                        var newEndpoint = newE.gossipEndpoint().getFirst();
+                        if (!oldEndpoint.ipAddressV4().equals(newEndpoint.ipAddressV4())) {
+                            report.append(String.format(
+                                    "    -- ipAddressV4: %s -> %s\n",
+                                    asReadableIp(oldEndpoint.ipAddressV4()), asReadableIp(newEndpoint.ipAddressV4())));
+                        }
+                        if (oldEndpoint.port() != newEndpoint.port()) {
+                            report.append(
+                                    String.format("    -- port: %s -> %s\n", oldEndpoint.port(), newEndpoint.port()));
+                        }
+                        if (!oldEndpoint.domainName().equals(newEndpoint.domainName())) {
+                            report.append(String.format(
+                                    "    -- domainName: %s -> %s\n",
+                                    oldEndpoint.domainName(), newEndpoint.domainName()));
+                        }
                     }
                 });
             }
 
             return report.toString();
         }
+    }
+
+    /**
+     * Converts the given {@link Bytes} instance to a readable IPv4 address string.
+     * @param ipV4Addr the {@link Bytes} instance to convert
+     * @return the readable IPv4 address string
+     */
+    static String asReadableIp(@NonNull final Bytes ipV4Addr) {
+        requireNonNull(ipV4Addr);
+        final var bytes = ipV4Addr.toByteArray();
+        return (0xff & bytes[0]) + "." + (0xff & bytes[1]) + "." + (0xff & bytes[2]) + "." + (0xff & bytes[3]);
     }
 }
