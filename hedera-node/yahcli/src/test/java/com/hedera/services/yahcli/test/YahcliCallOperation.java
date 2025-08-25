@@ -9,13 +9,11 @@ import com.hedera.services.bdd.spec.HapiSpec;
 import com.hedera.services.bdd.spec.transactions.TxnUtils;
 import com.hedera.services.yahcli.Yahcli;
 import edu.umd.cs.findbugs.annotations.NonNull;
-
+import edu.umd.cs.findbugs.annotations.Nullable;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 import java.util.function.Consumer;
-
-import edu.umd.cs.findbugs.annotations.Nullable;
 import org.junit.jupiter.api.Assertions;
 import picocli.CommandLine;
 
@@ -60,7 +58,8 @@ public class YahcliCallOperation extends AbstractYahcliOperation<YahcliCallOpera
             Path outputPath = null;
             if (outputCb != null) {
                 outputPath = Files.createTempFile(TxnUtils.randomUppercase(8), ".out");
-                finalizedArgs = prepend(finalizedArgs, "-o", outputPath.toAbsolutePath().toString());
+                finalizedArgs =
+                        prepend(finalizedArgs, "-o", outputPath.toAbsolutePath().toString());
             }
             final int rc = commandLine.execute(finalizedArgs);
             if (rc != 0) {

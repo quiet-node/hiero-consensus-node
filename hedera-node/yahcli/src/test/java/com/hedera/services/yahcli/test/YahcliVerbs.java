@@ -5,8 +5,14 @@ import static java.util.Objects.requireNonNull;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
+import java.util.function.LongConsumer;
+import java.util.regex.Pattern;
+import org.junit.jupiter.api.Assertions;
 
 public class YahcliVerbs {
+    private static final Pattern NEW_ACCOUNT_PATTERN = Pattern.compile("account num=(\\d+)");
+
     public static final AtomicReference<String> DEFAULT_CONFIG_LOC = new AtomicReference<>();
     public static final AtomicReference<String> DEFAULT_WORKING_DIR = new AtomicReference<>();
     public static final String TEST_NETWORK = "hapi";
@@ -23,6 +29,23 @@ public class YahcliVerbs {
     public static YahcliCallOperation yahcliAccounts(@NonNull final String... args) {
         requireNonNull(args);
         return new YahcliCallOperation(prepend(args, "accounts"));
+    }
+
+    /**
+     * Returns a callback that will look for a line indicating the creation of a new account,
+     * and pass the new account number to the given callback.
+     * @param cb the callback to capture the new account number
+     * @return the output consumer
+     */
+    public static Consumer<String> newAccountCapturer(@NonNull final LongConsumer cb) {
+        return output -> {
+            final var m = NEW_ACCOUNT_PATTERN.matcher(output);
+            if (m.find()) {
+                cb.accept(Long.parseLong(m.group(1)));
+            } else {
+                Assertions.fail("Expected '" + output + "' to contain '" + NEW_ACCOUNT_PATTERN.pattern() + "'");
+            }
+        };
     }
 
     /**

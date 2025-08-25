@@ -54,12 +54,8 @@ public class YahcliLauncherSessionListener implements LauncherSessionListener {
             if (!hasAnnotatedTestNode(testPlan, Set.of(HapiTest.class, LeakyHapiTest.class))) {
                 return;
             }
-            SharedNetworkLauncherSessionListener.onSubProcessNetworkReady(network -> {
-                writeYahcliConfigYml(network);
-                log.info(
-                        "YahcliLauncherSessionListener: SubProcessNetwork is ready for Yahcli tests, {}",
-                        network.nodes());
-            });
+            SharedNetworkLauncherSessionListener.onSubProcessNetworkReady(
+                    YahcliLauncherSessionListener::writeYahcliConfigYml);
             HapiSuite.DEFAULT_TEARDOWN = false;
         }
     }
