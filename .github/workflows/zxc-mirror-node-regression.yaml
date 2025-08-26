@@ -109,7 +109,7 @@ jobs:
           test:
             annotations:
               "helm.sh/hook-delete-policy": before-hook-creation
-            config
+            config:
               env:
                 HIERO_MIRROR_TEST_ACCEPTANCE_NETWORK: OTHER
             cucumberTags: "@acceptance and not @schedulebase"
