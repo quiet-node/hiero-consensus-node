@@ -17,6 +17,7 @@ import static com.hedera.services.bdd.suites.contract.Utils.asAddress;
 import com.hedera.services.bdd.junit.HapiTest;
 import com.hedera.services.bdd.junit.HapiTestLifecycle;
 import com.hedera.services.bdd.junit.OrderedInIsolation;
+import com.hedera.services.bdd.spec.HapiSpec;
 import com.hedera.services.bdd.spec.HapiSpecOperation;
 import com.hedera.services.bdd.spec.SpecOperation;
 import com.hedera.services.bdd.spec.transactions.contract.HapiParserUtil;
@@ -27,7 +28,6 @@ import java.math.BigInteger;
 import java.util.Map;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.DynamicTest;
@@ -53,15 +53,8 @@ public class OpsDurationThrottleTest {
     private static final long DEFAULT_OPS_DURATION_FREED_PER_SECOND = 10000000;
 
     @AfterEach
-    public void restABit() {
+    public void afterEach() {
         sleepForSeconds(2);
-    }
-
-    @AfterAll
-    public static void restoreConfig() {
-        restoreDefault(THROTTLE_THROTTLE_BY_OPS_DURATION);
-        restoreDefault(OPS_DURATION_THROTTLE_CAPACITY);
-        restoreDefault(OPS_DURATION_THROTTLE_UNITS_FREED_PER_SECOND);
     }
 
     private SpecOperation enableOpsDurationThrottle(long throttleCapacity, long unitsFreedPerSecond) {
@@ -73,6 +66,14 @@ public class OpsDurationThrottleTest {
 
     private SpecOperation disableOpsDurationThrottle() {
         return overriding(THROTTLE_THROTTLE_BY_OPS_DURATION, Boolean.toString(false));
+    }
+
+    private void restoreDefaults(HapiSpec spec) {
+        allRunFor(
+                spec,
+                restoreDefault(THROTTLE_THROTTLE_BY_OPS_DURATION),
+                restoreDefault(OPS_DURATION_THROTTLE_CAPACITY),
+                restoreDefault(OPS_DURATION_THROTTLE_UNITS_FREED_PER_SECOND));
     }
 
     @HapiTest
@@ -96,6 +97,7 @@ public class OpsDurationThrottleTest {
                                             .collectMaxOpsDuration(maxRecordedPercentageThrottleUtilization)))
                                     .toArray(HapiSpecOperation[]::new)));
                     allRunFor(spec, valueIsInRange(maxRecordedPercentageThrottleUtilization.get(), 100.0, 200.0));
+                    restoreDefaults(spec);
                 }));
     }
 
@@ -118,6 +120,7 @@ public class OpsDurationThrottleTest {
                                             .collectMaxOpsDuration(maxRecordedPercentageThrottleUtilization)))
                                     .toArray(HapiSpecOperation[]::new)));
                     allRunFor(spec, valueIsInRange(maxRecordedPercentageThrottleUtilization.get(), 0.0, 20.0));
+                    restoreDefaults(spec);
                 }));
     }
 
@@ -164,6 +167,7 @@ public class OpsDurationThrottleTest {
                                             .collectMaxOpsDuration(maxRecordedPercentageThrottleUtilization)))
                                     .toArray(HapiSpecOperation[]::new)));
                     allRunFor(spec, valueIsInRange(maxRecordedPercentageThrottleUtilization.get(), 100.0, 200.0));
+                    restoreDefaults(spec);
                 }));
     }
 
@@ -208,6 +212,7 @@ public class OpsDurationThrottleTest {
                                             .collectMaxOpsDuration(maxRecordedPercentageThrottleUtilization)))
                                     .toArray(HapiSpecOperation[]::new)));
                     allRunFor(spec, valueIsInRange(maxRecordedPercentageThrottleUtilization.get(), 0.0, 20.0));
+                    restoreDefaults(spec);
                 }));
     }
 
@@ -232,6 +237,7 @@ public class OpsDurationThrottleTest {
                                             .collectMaxOpsDuration(maxRecordedPercentageThrottleUtilization)))
                                     .toArray(HapiSpecOperation[]::new)));
                     allRunFor(spec, valueIsInRange(maxRecordedPercentageThrottleUtilization.get(), 100.0, 200.0));
+                    restoreDefaults(spec);
                 }));
     }
 
@@ -254,6 +260,7 @@ public class OpsDurationThrottleTest {
                                             .collectMaxOpsDuration(maxRecordedPercentageThrottleUtilization)))
                                     .toArray(HapiSpecOperation[]::new)));
                     allRunFor(spec, valueIsInRange(maxRecordedPercentageThrottleUtilization.get(), 0.0, 10.0));
+                    restoreDefaults(spec);
                 }));
     }
 
@@ -280,6 +287,7 @@ public class OpsDurationThrottleTest {
                                     .toArray(HapiSpecOperation[]::new)));
                     // We're expecting that the throttle has been reached at least once
                     allRunFor(spec, valueIsInRange(maxRecordedPercentageThrottleUtilization.get(), 100.0, 200.0));
+                    restoreDefaults(spec);
                 }));
     }
 
@@ -303,6 +311,7 @@ public class OpsDurationThrottleTest {
                                             .collectMaxOpsDuration(maxRecordedPercentageThrottleUtilization)))
                                     .toArray(HapiSpecOperation[]::new)));
                     allRunFor(spec, valueIsInRange(maxRecordedPercentageThrottleUtilization.get(), 0.0, 10.0));
+                    restoreDefaults(spec);
                 }));
     }
 
@@ -328,6 +337,7 @@ public class OpsDurationThrottleTest {
                                             .collectMaxOpsDuration(maxRecordedPercentageThrottleUtilization)))
                                     .toArray(HapiSpecOperation[]::new)));
                     allRunFor(spec, valueIsInRange(maxRecordedPercentageThrottleUtilization.get(), 100.0, 200.0));
+                    restoreDefaults(spec);
                 }));
     }
 
@@ -351,6 +361,7 @@ public class OpsDurationThrottleTest {
                                             .collectMaxOpsDuration(maxRecordedPercentageThrottleUtilization)))
                                     .toArray(HapiSpecOperation[]::new)));
                     allRunFor(spec, valueIsInRange(maxRecordedPercentageThrottleUtilization.get(), 0.0, 10.0));
+                    restoreDefaults(spec);
                 }));
     }
 
@@ -364,19 +375,22 @@ public class OpsDurationThrottleTest {
                 contractCreate(OPS_DURATION_THROTTLE).gas(2_000_000L),
                 // Let's add some initial capacity, but don't free any units once exhausted
                 enableOpsDurationThrottle(DEFAULT_OPS_DURATION_CAPACITY, 0L),
-                withOpContext((spec, opLog) -> allRunFor(
-                        spec,
-                        // First a success that doesn't overflow the ops duration limit
-                        contractCall(OPS_DURATION_THROTTLE, "runMulti", BigInteger.valueOf(5L))
-                                .gas(10_000_000L)
-                                .hasKnownStatus(ResponseCodeEnum.SUCCESS),
-                        // This is expected to leave the bucket overfilled when complete
-                        contractCall(OPS_DURATION_THROTTLE, "runMulti", BigInteger.valueOf(50))
-                                .gas(10_000_000L)
-                                .hasKnownStatus(ResponseCodeEnum.SUCCESS),
-                        // The bucket is full, so this should fail (even though it's just a single iteration)
-                        contractCall(OPS_DURATION_THROTTLE, "runMulti", BigInteger.valueOf(1))
-                                .gas(10_000_000L)
-                                .hasKnownStatus(ResponseCodeEnum.CONSENSUS_GAS_EXHAUSTED))));
+                withOpContext((spec, opLog) -> {
+                    allRunFor(
+                            spec,
+                            // First a success that doesn't overflow the ops duration limit
+                            contractCall(OPS_DURATION_THROTTLE, "runMulti", BigInteger.valueOf(5L))
+                                    .gas(10_000_000L)
+                                    .hasKnownStatus(ResponseCodeEnum.SUCCESS),
+                            // This is expected to leave the bucket overfilled when complete
+                            contractCall(OPS_DURATION_THROTTLE, "runMulti", BigInteger.valueOf(50))
+                                    .gas(10_000_000L)
+                                    .hasKnownStatus(ResponseCodeEnum.SUCCESS),
+                            // The bucket is full, so this should fail (even though it's just a single iteration)
+                            contractCall(OPS_DURATION_THROTTLE, "runMulti", BigInteger.valueOf(1))
+                                    .gas(10_000_000L)
+                                    .hasKnownStatus(ResponseCodeEnum.CONSENSUS_GAS_EXHAUSTED));
+                    restoreDefaults(spec);
+                }));
     }
 }
