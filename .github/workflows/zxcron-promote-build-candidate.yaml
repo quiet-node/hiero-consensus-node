@@ -290,7 +290,7 @@ jobs:
         id: rootly-summary
         run: |
           summary="The Promote Build Candidate job failed"
-          if [[ -z "${{ needs.promote-build-candidate.outputs.build-candidate-tag }}" ]]; then
+          if [[ -n "${{ needs.promote-build-candidate.outputs.build-candidate-tag }}" ]]; then
             summary="The Promote Build Candidate job failed (${{ needs.promote-build-candidate.outputs.build-candidate-tag }})."
           fi
           echo "summary=${summary}" >> "${GITHUB_OUTPUT}"
