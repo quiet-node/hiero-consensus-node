@@ -62,6 +62,7 @@ import static com.hedera.services.bdd.suites.HapiSuite.SECP_256K1_SHAPE;
 import static com.hedera.services.bdd.suites.HapiSuite.SECP_256K1_SOURCE_KEY;
 import static com.hedera.services.bdd.suites.contract.Utils.asHexedSolidityAddress;
 import static com.hederahashgraph.api.proto.java.HederaFunctionality.CryptoAddLiveHash;
+import static com.hederahashgraph.api.proto.java.HederaFunctionality.CryptoDeleteLiveHash;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.ACCOUNT_DELETED;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.BATCH_KEY_SET_ON_NON_INNER_TRANSACTION;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.BATCH_LIST_CONTAINS_DUPLICATES;
@@ -96,6 +97,7 @@ import com.hedera.services.bdd.junit.LeakyHapiTest;
 import com.hedera.services.bdd.spec.keys.KeyShape;
 import com.hedera.services.bdd.spec.transactions.TxnUtils;
 import com.hederahashgraph.api.proto.java.CryptoAddLiveHashTransactionBody;
+import com.hederahashgraph.api.proto.java.CryptoDeleteLiveHashTransactionBody;
 import com.hederahashgraph.api.proto.java.Key;
 import com.hederahashgraph.api.proto.java.Timestamp;
 import com.hederahashgraph.api.proto.java.TokenType;
@@ -803,6 +805,20 @@ public class AtomicBatchNegativeTest {
                                             .signedByPayerAnd("batchOperator"))
                             .hasKnownStatus(BATCH_TRANSACTION_IN_BLACKLIST));
         }
+
+        @HapiTest
+        @DisplayName("schedule transactions are blacklisted in atomic batch")
+        public Stream<DynamicTest> scheduleBlackList() {
+            return hapiTest(
+                    cryptoCreate("batchOperator"),
+                    atomicBatch(scheduleCreate("schedule", cryptoCreate("foo")).batchKey("batchOperator"))
+                            .payingWith("batchOperator")
+                            .hasKnownStatus(BATCH_TRANSACTION_IN_BLACKLIST),
+                    scheduleCreate("schedule", cryptoCreate("foo")),
+                    atomicBatch(scheduleSign("schedule").batchKey("batchOperator"))
+                            .payingWith("batchOperator")
+                            .hasKnownStatus(BATCH_TRANSACTION_IN_BLACKLIST));
+        }
     }
 
     @Nested
@@ -1012,20 +1028,6 @@ public class AtomicBatchNegativeTest {
                 atomicBatch(innerCryptoTxn).payingWith(batchOperator).hasPrecheck(INVALID_NODE_ACCOUNT_ID));
     }
 
-    @HapiTest
-    @DisplayName("schedule transactions are blacklisted in atomic batch")
-    public Stream<DynamicTest> scheduleBlackList() {
-        return hapiTest(
-                cryptoCreate("batchOperator"),
-                atomicBatch(scheduleCreate("schedule", cryptoCreate("foo")).batchKey("batchOperator"))
-                        .payingWith("batchOperator")
-                        .hasKnownStatus(BATCH_TRANSACTION_IN_BLACKLIST),
-                scheduleCreate("schedule", cryptoCreate("foo")),
-                atomicBatch(scheduleSign("schedule").batchKey("batchOperator"))
-                        .payingWith("batchOperator")
-                        .hasKnownStatus(BATCH_TRANSACTION_IN_BLACKLIST));
-    }
-
     /**
      * Rollback contract emitted logs on fail.
      * @return hapi test
@@ -1170,7 +1172,7 @@ public class AtomicBatchNegativeTest {
     }
 
     @HapiTest
-    public Stream<DynamicTest> unsupportedWillFail() {
+    public Stream<DynamicTest> addLiveHashIsUnsupported() {
         final var batchOperator = "batchOperator";
         return hapiTest(
                 cryptoCreate(batchOperator),
@@ -1179,6 +1181,22 @@ public class AtomicBatchNegativeTest {
                                         TransactionBody.newBuilder()
                                                 .setCryptoAddLiveHash(
                                                         CryptoAddLiveHashTransactionBody.getDefaultInstance())
+                                                .build())
+                                .batchKey(batchOperator))
+                        .payingWith(batchOperator)
+                        .hasPrecheck(NOT_SUPPORTED));
+    }
+
+    @HapiTest
+    public Stream<DynamicTest> deleteLiveHashIsUnsupported() {
+        final var batchOperator = "batchOperator";
+        return hapiTest(
+                cryptoCreate(batchOperator),
+                atomicBatch(fromTxnBodyOp(
+                                        CryptoDeleteLiveHash,
+                                        TransactionBody.newBuilder()
+                                                .setCryptoDeleteLiveHash(
+                                                        CryptoDeleteLiveHashTransactionBody.getDefaultInstance())
                                                 .build())
                                 .batchKey(batchOperator))
                         .payingWith(batchOperator)
