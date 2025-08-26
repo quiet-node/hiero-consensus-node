@@ -20,6 +20,8 @@ public class EventInfo {
     private final List<EventTraceInfo> receivedTraces = new ArrayList<>();
     private final List<EventTraceInfo> preHandledTraces = new ArrayList<>();
     private final List<TransactionInfo> transactions = new ArrayList<>();
+    private final long eventStartTimeNanos;
+    private final long eventEndTimeNanos;
 
     public EventInfo(final List<BlockItem> eventItems,
             final IntObjectHashMap<List<EventTraceInfo>> eventTraces,
@@ -51,6 +53,16 @@ public class EventInfo {
             if (transactionItems != null) transactionItems.add(item);
         }
         if (transactionItems != null) transactions.add(new TransactionInfo(transactionItems, transactionTraces));
+        // find event start and end time
+        eventStartTimeNanos = createdTrace != null ? createdTrace.startTimeNanos() :
+                eventTraces.stream().flatMap(List::stream)
+                        .mapToLong(t -> Math.min(t.startTimeNanos(), t.endTimeNanos()))
+                        .min()
+                        .orElse(0L);
+        eventEndTimeNanos = preHandledTraces.stream()
+                .mapToLong(ph -> ph.endTimeNanos())
+                .max()
+                .orElse(eventStartTimeNanos);
     }
 
     public int eventHash() {
@@ -75,5 +87,13 @@ public class EventInfo {
 
     public List<TransactionInfo> transactions() {
         return transactions;
+    }
+
+    public long eventStartTimeNanos() {
+        return eventStartTimeNanos;
+    }
+
+    public long eventEndTimeNanos() {
+        return eventEndTimeNanos;
     }
 }

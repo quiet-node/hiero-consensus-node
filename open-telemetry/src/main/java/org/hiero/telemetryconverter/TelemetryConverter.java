@@ -156,7 +156,7 @@ public final class TelemetryConverter {
                     })
                     .filter(Objects::nonNull)
                     .map(BlockSpanCreator::createBlockSpans)
-                    .limit(1) // TODO limit to first 1 blocks for testing
+                    .limit(5) // TODO limit to first 5 blocks for testing
                     .forEach(TelemetryConverter::sendSpans);
         }
     }
