@@ -106,12 +106,15 @@ jobs:
         run: |
           set -ex
           cat <<EOF > mirror.yml
-          test.annotations."helm.sh/hook-delete-policy": before-hook-creation
-          test.config.hiero.mirror.test.acceptance.network: OTHER
-          test.cucumberTags: "@acceptance and not @schedulebase"
-          test.enabled: true
+          test:
+            annotations:
+              "helm.sh/hook-delete-policy": before-hook-creation
+            config
+              env:
+                HIERO_MIRROR_TEST_ACCEPTANCE_NETWORK: OTHER
+            cucumberTags: "@acceptance and not @schedulebase"
+            enabled: true
           EOF
-          cat mirror.yml
           kind create cluster -n "${SOLO_CLUSTER_NAME}"
           solo init
           solo cluster-ref connect --cluster-ref "kind-${SOLO_CLUSTER_NAME}" --context "kind-${SOLO_CLUSTER_NAME}"
@@ -127,7 +130,7 @@ jobs:
 
       # Perform mirror node regression tests
       - name: Execute mirror node acceptance tests
-        run: helm test mirror --logs -n "${SOLO_NAMESPACE}" --timeout 30m
+        run: helm test mirror --filter name=mirror-acceptance --logs -n "${SOLO_NAMESPACE}" --timeout 30m
 
       # Collect run logs in a log file, ignore last job as it is the one that runs this workflow
       - name: Collect run logs in a log file
