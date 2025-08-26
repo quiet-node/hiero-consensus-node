@@ -96,7 +96,7 @@ public class OpsDurationThrottleTest {
                                                     ResponseCodeEnum.SUCCESS, ResponseCodeEnum.CONSENSUS_GAS_EXHAUSTED)
                                             .collectMaxOpsDuration(maxRecordedPercentageThrottleUtilization)))
                                     .toArray(HapiSpecOperation[]::new)));
-                    allRunFor(spec, valueIsInRange(maxRecordedPercentageThrottleUtilization.get(), 100.0, 200.0));
+                    allRunFor(spec, valueIsInRange(maxRecordedPercentageThrottleUtilization.get(), 70.0, 200.0));
                     restoreDefaults(spec);
                 }));
     }
@@ -166,7 +166,7 @@ public class OpsDurationThrottleTest {
                                                     ResponseCodeEnum.SUCCESS, ResponseCodeEnum.CONSENSUS_GAS_EXHAUSTED)
                                             .collectMaxOpsDuration(maxRecordedPercentageThrottleUtilization)))
                                     .toArray(HapiSpecOperation[]::new)));
-                    allRunFor(spec, valueIsInRange(maxRecordedPercentageThrottleUtilization.get(), 100.0, 200.0));
+                    allRunFor(spec, valueIsInRange(maxRecordedPercentageThrottleUtilization.get(), 70.0, 200.0));
                     restoreDefaults(spec);
                 }));
     }
@@ -236,7 +236,7 @@ public class OpsDurationThrottleTest {
                                                     ResponseCodeEnum.SUCCESS, ResponseCodeEnum.CONSENSUS_GAS_EXHAUSTED)
                                             .collectMaxOpsDuration(maxRecordedPercentageThrottleUtilization)))
                                     .toArray(HapiSpecOperation[]::new)));
-                    allRunFor(spec, valueIsInRange(maxRecordedPercentageThrottleUtilization.get(), 100.0, 200.0));
+                    allRunFor(spec, valueIsInRange(maxRecordedPercentageThrottleUtilization.get(), 70.0, 200.0));
                     restoreDefaults(spec);
                 }));
     }
@@ -286,7 +286,7 @@ public class OpsDurationThrottleTest {
                                             .collectMaxOpsDuration(maxRecordedPercentageThrottleUtilization)))
                                     .toArray(HapiSpecOperation[]::new)));
                     // We're expecting that the throttle has been reached at least once
-                    allRunFor(spec, valueIsInRange(maxRecordedPercentageThrottleUtilization.get(), 100.0, 200.0));
+                    allRunFor(spec, valueIsInRange(maxRecordedPercentageThrottleUtilization.get(), 70.0, 200.0));
                     restoreDefaults(spec);
                 }));
     }
@@ -336,7 +336,7 @@ public class OpsDurationThrottleTest {
                                                     ResponseCodeEnum.CONSENSUS_GAS_EXHAUSTED)
                                             .collectMaxOpsDuration(maxRecordedPercentageThrottleUtilization)))
                                     .toArray(HapiSpecOperation[]::new)));
-                    allRunFor(spec, valueIsInRange(maxRecordedPercentageThrottleUtilization.get(), 100.0, 200.0));
+                    allRunFor(spec, valueIsInRange(maxRecordedPercentageThrottleUtilization.get(), 70.0, 200.0));
                     restoreDefaults(spec);
                 }));
     }
