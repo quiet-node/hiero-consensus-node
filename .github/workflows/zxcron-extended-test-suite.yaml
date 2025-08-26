@@ -165,7 +165,7 @@ jobs:
           else
             gh run cancel "${{ github.run_id }}"
           fi
-          
+
           # Force a failure
           exit 1
 

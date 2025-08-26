@@ -76,7 +76,7 @@ jobs:
           else
             # gh run cancel "${{ github.run_id }}"
           fi
-          
+
           ## force a failure FOR TESTING
           exit 1
 
@@ -318,14 +318,14 @@ jobs:
       - name: Report Failure (Rootly)
         uses: pandaswhocode/rootly-alert-action@fdae1529e5aed62040016accf719a0ceb7dae57f # v1.0.0
         with:
-          api_key: ${{ secrets.ROOTLY_API_KEY }}
+          api_key: ${{ secrets.ROOTLY_API_TOKEN }}
           summary: ${{ steps.rootly-summary.outputs.summary }}
           details: ${{ steps.rootly-summary.outputs.details }}
           notification_target_type: "Service"
-          notification_target: 'CI/CD Workflows'
-          set_as_noise: 'true'
-          alert_urgency: 'High'
-          environments: 'CITR'
+          notification_target: "CI/CD Workflows"
+          set_as_noise: "true"
+          alert_urgency: "High"
+          environments: "CITR"
           external_id: ${{ github.run_id }}
           external_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
