@@ -71,10 +71,10 @@ jobs:
               echo "build-candidate-commit=${CANDIDATE_COMMIT}" >> "${GITHUB_STEP_SUMMARY}"
               echo "build-candidate-tag=${CANDIDATE_TAG}" >> "${GITHUB_STEP_SUMMARY}"
             else
-              gh run cancel "${{ github.run_id }}"
+              # gh run cancel "${{ github.run_id }}"
             fi
           else
-            gh run cancel "${{ github.run_id }}"
+            # gh run cancel "${{ github.run_id }}"
           fi
           
           ## force a failure FOR TESTING
