@@ -22,9 +22,16 @@ public abstract class AbstractNode implements Node {
      * Represents the lifecycle states of a node.
      */
     public enum LifeCycle {
+        /** The node is initializing. */
         INIT,
+
+        /** The node is running. */
         RUNNING,
+
+        /** The node was shut down, but can be started again. */
         SHUTDOWN,
+
+        /** The node was destroyed and cannot be started again. */
         DESTROYED
     }
 
@@ -51,25 +58,11 @@ public abstract class AbstractNode implements Node {
      * Constructor for the AbstractNode class.
      *
      * @param selfId the unique identifier for this node
-     * @param weight the weight of this node
-     */
-    protected AbstractNode(@NonNull final NodeId selfId, final long weight) {
-        this.selfId = requireNonNull(selfId, "selfId must not be null");
-        this.weight = weight;
-    }
-
-    /**
-     * Constructor for the AbstractNode class.
-     *
-     * @param selfId the unique identifier for this node
      * @param roster the roster for the network this node is part of
      */
     protected AbstractNode(@NonNull final NodeId selfId, final Roster roster) {
-        this(selfId, getWeight(selfId, roster));
-    }
-
-    private static long getWeight(@NonNull final NodeId selfId, @NonNull final Roster roster) {
-        return roster.rosterEntries().stream()
+        this.selfId = requireNonNull(selfId, "selfId must not be null");
+        this.weight = roster.rosterEntries().stream()
                 .filter(r -> r.nodeId() == selfId.id())
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Node ID not found in roster"))
