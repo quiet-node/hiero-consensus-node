@@ -95,7 +95,7 @@ public class SimulatedBlockNodeServer {
      *
      * @param port the port to listen on
      * @param lastVerifiedBlockNumberSupplier an optional supplier that provides the last verified block number
-     *                                       from an external source, can be null if not needed
+     * from an external source, can be null if not needed
      */
     public SimulatedBlockNodeServer(final int port, @Nullable final Supplier<Long> lastVerifiedBlockNumberSupplier) {
         this.port = port;
@@ -154,7 +154,7 @@ public class SimulatedBlockNodeServer {
      * @throws NullPointerException if responseCode is null
      */
     public void setEndOfStreamResponse(@NonNull final EndOfStream.Code responseCode, final long blockNumber) {
-        requireNonNull(responseCode, "Response code cannot be null");
+        requireNonNull(responseCode, "responseCode cannot be null");
         endOfStreamConfig.set(new EndOfStreamConfig(responseCode, blockNumber));
         log.info("Set EndOfStream response to {} for block {} on port {}", responseCode, blockNumber, port);
     }
@@ -169,7 +169,7 @@ public class SimulatedBlockNodeServer {
      * @throws NullPointerException if responseCode is null
      */
     public long sendEndOfStreamImmediately(@NonNull final EndOfStream.Code responseCode, final long blockNumber) {
-        requireNonNull(responseCode, "Response code cannot be null");
+        requireNonNull(responseCode, "responseCode cannot be null");
         serviceImpl.sendEndOfStreamToAllStreams(responseCode, blockNumber);
         log.info(
                 "Sent immediate EndOfStream response with code {} for block {} on port {}",
@@ -496,7 +496,6 @@ public class SimulatedBlockNodeServer {
                     try {
                         sendEndOfStream(observer, responseCode, blockNumber);
                         // Assuming EndOfStream terminates the connection from server side perspective
-                        observer.onCompleted();
                         streamsToRemove.add(observer); // Mark for removal after iteration
                     } catch (final Exception e) {
                         log.error("Failed to send EndOfStream to stream {} on port {}", observer.hashCode(), port, e);
