@@ -331,7 +331,7 @@ public class BlockBufferService {
      * @return the lowest unacked block number or 0 if the buffer is empty
      */
     public long getLowestUnackedBlockNumber() {
-        return highestAckedBlockNumber.get() == Long.MIN_VALUE ? 0 : highestAckedBlockNumber.get() + 1;
+        return highestAckedBlockNumber.get() == Long.MIN_VALUE ? -1 : highestAckedBlockNumber.get() + 1;
     }
 
     /**

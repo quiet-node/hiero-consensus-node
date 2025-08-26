@@ -1011,8 +1011,12 @@ public class BlockNodeConnectionManager {
                 if (activeConnectionRef.compareAndSet(activeConnectionForCAS, connection)) {
                     // we were able to elevate this connection to the new active one
                     connection.updateConnectionState(ConnectionState.ACTIVE);
-                    final long blockToJumpTo =
-                            blockNumber != null ? blockNumber : blockBufferService.getLowestUnackedBlockNumber();
+                    final long blockToJumpTo = blockNumber != null
+                            ? blockNumber
+                            : (blockBufferService.getLowestUnackedBlockNumber() == -1
+                                    ? 0
+                                    : blockBufferService.getLowestUnackedBlockNumber());
+
                     jumpTargetBlock.set(blockToJumpTo);
                 } else {
                     // Another connection task has preempted this task... reschedule and try again
