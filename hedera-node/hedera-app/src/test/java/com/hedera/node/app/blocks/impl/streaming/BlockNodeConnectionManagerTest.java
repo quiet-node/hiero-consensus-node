@@ -238,6 +238,9 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         connections.put(node2Config, node2Conn);
         connections.put(node3Config, node3Conn);
 
+        // introduce a failure on one of the connection closes to ensure the shutdown process does not fail prematurely
+        doThrow(new RuntimeException("oops, I did it again")).when(node2Conn).close();
+
         final AtomicBoolean isActive = isActiveFlag();
         final Thread dummyWorkerThread = mock(Thread.class);
         final AtomicReference<Thread> workerThreadRef = workerThread();

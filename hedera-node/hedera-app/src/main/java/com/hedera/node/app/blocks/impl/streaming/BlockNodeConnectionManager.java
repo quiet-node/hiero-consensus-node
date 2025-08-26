@@ -491,7 +491,14 @@ public class BlockNodeConnectionManager {
         while (it.hasNext()) {
             final Map.Entry<BlockNodeConfig, BlockNodeConnection> entry = it.next();
             final BlockNodeConnection connection = entry.getValue();
-            connection.close();
+            try {
+                connection.close();
+            } catch (final RuntimeException e) {
+                logger.warn(
+                        "[{}] Error while closing connection during connection manager shutdown; ignoring",
+                        connection,
+                        e);
+            }
             it.remove();
         }
     }
@@ -534,13 +541,13 @@ public class BlockNodeConnectionManager {
         logger.debug("{} Selecting new block node priority-wise", threadInfo());
 
         List<BlockNodeConnection> lockedConnections = new ArrayList<>();
-        // Lock all existing connections to ensure state consistency
-        connections.values().forEach(connection -> {
-            connection.getLock().lock();
-            lockedConnections.add(connection);
-        });
-
         try {
+            // Lock all existing connections to ensure state consistency
+            connections.values().forEach(connection -> {
+                connection.getLock().lock();
+                lockedConnections.add(connection);
+            });
+
             final BlockNodeConfig selectedNode = getNextPriorityBlockNode();
             if (selectedNode == null) {
                 logger.warn("{} No block nodes found for attempted streaming", threadInfo());
@@ -561,9 +568,17 @@ public class BlockNodeConnectionManager {
             return true;
         } finally {
             // Release all acquired locks in reverse order
-            for (int i = lockedConnections.size() - 1; i >= 0; i--) {
-                lockedConnections.get(i).getLock().unlock();
-            }
+            lockedConnections.forEach(connection -> {
+                try {
+                    connection.getLock().unlock();
+                } catch (final RuntimeException e) {
+                    logger.error(
+                            "{} Failed to unlock connection for node '{}'. This may lead to deadlocks.",
+                            threadInfo(),
+                            connection.getNodeConfig().address(),
+                            e);
+                }
+            });
         }
     }
 

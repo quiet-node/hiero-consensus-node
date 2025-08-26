@@ -698,17 +698,14 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
     public void onError(final Throwable error) {
         logger.warn("{} [{}] onError invoked", threadInfo(), this, error);
 
-        // Check if already in terminal state
-        if (getConnectionState() == ConnectionState.CLOSED) {
-            logger.debug("{} [{}] onError invoked but connection is already closed", threadInfo(), this);
-            return;
-        }
-
         // Handle the error - this will change state, so acquire write lock
         stateLock.lock();
         try {
-            // Re-check state after acquiring write lock
-            if (getConnectionState() == ConnectionState.ACTIVE || getConnectionState() == ConnectionState.PENDING) {
+            // Check if already in terminal state
+            if (getConnectionState() == ConnectionState.CLOSED) {
+                logger.debug("{} [{}] onError invoked but connection is already closed", threadInfo(), this);
+            } else if (getConnectionState() == ConnectionState.ACTIVE
+                    || getConnectionState() == ConnectionState.PENDING) {
                 logger.warn("{} [{}] onError being handled", threadInfo(), this, error);
                 blockStreamMetrics.incrementOnErrorCount();
                 handleStreamFailure();
