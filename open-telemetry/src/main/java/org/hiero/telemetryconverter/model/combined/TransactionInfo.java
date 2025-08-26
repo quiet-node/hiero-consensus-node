@@ -8,6 +8,7 @@ import com.hedera.pbj.runtime.io.buffer.Bytes;
 import java.util.List;
 import org.eclipse.collections.impl.map.mutable.primitive.IntObjectHashMap;
 import org.hiero.telemetryconverter.model.trace.TransactionTraceInfo;
+import org.hiero.telemetryconverter.util.WarningException;
 
 /**
  * Information about a transaction, extracted from the BlockItems and TransactionTraceInfo.
@@ -30,9 +31,13 @@ public class TransactionInfo {
             // get the transaction hash code
             txHash = transactionBody.transactionID().hashCode();
             // find traces
-            receivedTraces = transactionTraces.get(txHash).stream()
+            final var traces = transactionTraces.get(txHash);
+            if (traces == null) {
+                throw new WarningException("No transaction traces found in JFR files for transaction hash " + txHash);
+            }
+            receivedTraces = traces.stream()
                     .filter(t -> t.eventType() == TransactionTraceInfo.EventType.RECEIVED).toList();
-            executedTraces = transactionTraces.get(txHash).stream()
+            executedTraces = traces.stream()
                     .filter(t -> t.eventType() == TransactionTraceInfo.EventType.EXECUTED).toList();
             // find the earliest received time
             transactionReceivedTimeNanos = receivedTraces.stream()

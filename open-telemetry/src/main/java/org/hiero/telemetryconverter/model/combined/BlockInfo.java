@@ -1,13 +1,15 @@
 package org.hiero.telemetryconverter.model.combined;
 
-import static org.hiero.telemetryconverter.Utils.unixEpocNanosToInstant;
+import static org.hiero.telemetryconverter.util.Utils.unixEpocNanosToInstant;
 
 import com.hedera.hapi.block.stream.Block;
 import com.hedera.hapi.block.stream.BlockItem;
 import com.hedera.hapi.block.stream.output.BlockHeader;
 import com.hedera.pbj.runtime.ParseException;
 import com.hedera.pbj.runtime.io.stream.ReadableStreamingData;
+import java.io.EOFException;
 import java.io.IOException;
+import java.lang.System.Logger.Level;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -15,11 +17,14 @@ import java.util.List;
 import java.util.zip.GZIPInputStream;
 import org.eclipse.collections.impl.map.mutable.primitive.IntObjectHashMap;
 import org.eclipse.collections.impl.map.mutable.primitive.LongObjectHashMap;
+import org.hiero.telemetryconverter.JfrFileReader;
 import org.hiero.telemetryconverter.model.trace.BlockTraceInfo;
 import org.hiero.telemetryconverter.model.trace.BlockTraceInfo.EventType;
 import org.hiero.telemetryconverter.model.trace.EventTraceInfo;
 import org.hiero.telemetryconverter.model.trace.RoundTraceInfo;
 import org.hiero.telemetryconverter.model.trace.TransactionTraceInfo;
+import org.hiero.telemetryconverter.util.CleanColorfulFormatter;
+import org.hiero.telemetryconverter.util.WarningException;
 
 /**
  * Correlated block information from JFR events and block stream. We collect and correlate all data into this class so
@@ -27,6 +32,7 @@ import org.hiero.telemetryconverter.model.trace.TransactionTraceInfo;
  */
 @SuppressWarnings("DataFlowIssue")
 public class BlockInfo {
+    private static final System.Logger LOGGER = System.getLogger(BlockInfo.class.getName());
     private final long blockNum;
     private final List<BlockTraceInfo> blockCreationTraces;
     private final List<RoundInfo> rounds = new ArrayList<>();
@@ -50,7 +56,7 @@ public class BlockInfo {
             // find block trace info
             final List<BlockTraceInfo> traces = blockTraces.get(blockNum);
             if (traces == null) {
-                throw new RuntimeException("No block traces found for block " + blockNum);
+                throw new WarningException("No block traces found in JFR files for block " + blockNum);
             }
             blockCreationTraces = traces.stream()
                     .filter(t -> t.eventType() == EventType.CREATED).toList();
@@ -68,13 +74,16 @@ public class BlockInfo {
                 if (roundItems != null) roundItems.add(item);
             }
             // count number of block items of each type
-            items.stream()
-                    .map(i -> i.item().kind())
-                    .distinct()
-                    .forEach(k -> {
-                        long count = items.stream().filter(i -> i.item().kind() == k).count();
-                        System.out.println("            Block " + blockNum + " has " + count + " items of type " + k);
-                    });
+            LOGGER.log(Level.INFO, "Block " + blockNum + " has " + items.size() + " items with " +
+                    CleanColorfulFormatter.GREY+"BlockItem.Kind Counts --> "+items.stream()
+                        .map(i -> i.item().kind())
+                        .distinct()
+                        .map(k -> {
+                            long count = items.stream().filter(i -> i.item().kind() == k).count();
+                            return k + "="+count;
+                        }).reduce((a, b) -> a + ", " + b).orElse(""));
+        } catch (EOFException e) {
+            throw new WarningException("Block file " + blockFile.getFileName() + " is not complete, server probably exited while writing");
         } catch (IOException | ParseException e) {
             throw new RuntimeException(e);
         }

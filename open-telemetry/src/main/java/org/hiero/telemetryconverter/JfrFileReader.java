@@ -1,9 +1,15 @@
 package org.hiero.telemetryconverter;
 
+import static java.lang.System.Logger.Level.DEBUG;
+import static java.lang.System.Logger.Level.INFO;
+import static java.lang.System.Logger.Level.TRACE;
+
 import java.io.IOException;
+import java.lang.System.Logger.Level;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
 import jdk.jfr.consumer.RecordedEvent;
 import jdk.jfr.consumer.RecordingFile;
 import org.eclipse.collections.impl.map.mutable.primitive.IntObjectHashMap;
@@ -12,8 +18,11 @@ import org.hiero.telemetryconverter.model.trace.BlockTraceInfo;
 import org.hiero.telemetryconverter.model.trace.EventTraceInfo;
 import org.hiero.telemetryconverter.model.trace.RoundTraceInfo;
 import org.hiero.telemetryconverter.model.trace.TransactionTraceInfo;
+import org.hiero.telemetryconverter.util.Utils;
 
 public class JfrFileReader {
+    private static final System.Logger LOGGER = System.getLogger(JfrFileReader.class.getName());
+
     /**
      * Read a single JFR file from single node and populate the roundTraces, eventTraces, and transactionTraces maps.
      * <p>
@@ -29,7 +38,7 @@ public class JfrFileReader {
             final IntObjectHashMap<List<TransactionTraceInfo>> transactionTraces) {
         final String fileName = jfrFile.getFileName().toString();
         final long nodeId = Long.parseLong(fileName.substring(fileName.indexOf("node-") + 5, fileName.indexOf(".jfr")));
-        System.out.printf("Reading JFR file: %s , nodeId:%d%n", jfrFile, nodeId);
+        LOGGER.log(INFO,"Reading JFR file: {0} , nodeId:{1}", jfrFile, nodeId);
         try (var rf = new RecordingFile(jfrFile)) {
             while (rf.hasMoreEvents()) {
                 final RecordedEvent e = rf.readEvent();
@@ -84,12 +93,18 @@ public class JfrFileReader {
             System.err.printf("Error reading JFR file %s: %s%n", jfrFile, e.getMessage());
             e.printStackTrace();
         }
+        final long numberOfBlockTraces = blockTraces.values().stream().mapToLong(List::size).sum();
         final long numberOfRoundTraces = roundTraces.values().stream().mapToLong(List::size).sum();
         final long numberOfEventTraces = eventTraces.values().stream().mapToLong(List::size).sum();
         final long numberOfTransactionTraces = transactionTraces.values().stream()
                 .mapToLong(List::size).sum();
-        System.out.printf(
-                "    Finished reading JFR file: %s, found %,d round traces, %,d event traces, %,d transaction traces%n",
-                jfrFile, numberOfRoundTraces, numberOfEventTraces, numberOfTransactionTraces);
+        LOGGER.log(INFO,
+                "    Finished reading JFR file: {0}, found "
+                        + "{1} block traces, "
+                        + "{2} round traces, "
+                        + "{3} event traces, "
+                        + "{4} transaction traces",
+                jfrFile.getFileName(), numberOfBlockTraces, numberOfRoundTraces, numberOfEventTraces,
+                numberOfTransactionTraces);
     }
 }

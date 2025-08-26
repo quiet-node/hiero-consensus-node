@@ -10,4 +10,5 @@ module org.hiero.telemetryconverter {
     requires com.hedera.pbj.grpc.client.helidon;
     requires io.helidon.common.tls;
     requires io.helidon.webclient.api;
+    requires java.logging;
 }

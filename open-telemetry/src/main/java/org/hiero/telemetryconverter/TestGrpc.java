@@ -22,6 +22,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
+import org.hiero.telemetryconverter.util.Utils;
 
 
 public class TestGrpc {
@@ -84,10 +85,11 @@ public class TestGrpc {
                 .resource(resource)
                 .scopeSpans(ScopeSpans.newBuilder().spans(rootSpan, span1, span2, span11).build())
                 .build();
-
-        client.Export(ExportTraceServiceRequest.newBuilder()
+        final ExportTraceServiceRequest request = ExportTraceServiceRequest.newBuilder()
                 .resourceSpans(resourceSpans)
-                .build());
+                .build();
+        System.out.println("ExportTraceServiceRequest = " + ExportTraceServiceRequest.JSON.toJSON(request));
+        client.Export(request);
     }
 
     private static GrpcClient createGrpcClient(String baseUri) {

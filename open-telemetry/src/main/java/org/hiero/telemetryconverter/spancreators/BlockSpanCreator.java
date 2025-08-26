@@ -9,7 +9,7 @@ import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import org.hiero.telemetryconverter.Utils;
+import org.hiero.telemetryconverter.util.Utils;
 import org.hiero.telemetryconverter.model.combined.BlockInfo;
 
 /**
@@ -25,25 +25,26 @@ public class BlockSpanCreator {
             final Bytes blockTraceID = Utils.longToHash16Bytes(digest, blockInfo.blockNum());
             final Bytes blockSpanID = Utils.longToHash8Bytes(blockInfo.blockNum());
             // create spans for each round in the block
+            for (var round : blockInfo.rounds()) {
+                final Bytes roundSpanID = Utils.longToHash8Bytes(round.roundNumber());
+                final Span roundSpan = Span.newBuilder()
+                        .traceId(blockTraceID) // 16 byte trace id
+                        .spanId(roundSpanID) // 8 byte span id
+                        .parentSpanId(blockSpanID)
+                        .name("Round " + round.roundNumber())
+                        .startTimeUnixNano(round.roundStartTimeNanos())
+                        .endTimeUnixNano(round.roundEndTimeNanos())
+                        .build();
+                spans.add(roundSpan);
+            }
             // create a span for the block
-            final Span blockSpan = new Span(
-                    blockTraceID, // 16 byte trace id
-                    blockSpanID, // 8 byte span id
-                    null, // don't think we need to use trace state
-                    null, // no parent span id
-                    0, // TODO flags
-                    "Block " + blockInfo.blockNum(),
-                    SpanKind.SPAN_KIND_CLIENT,
-                    blockInfo.blockStartTimeNanos(),
-                    blockInfo.blockEndTimeNanos(),
-                    Collections.emptyList(), // TODO attributes
-                    0,
-                    Collections.emptyList(), // TODO events
-                    0,
-                    Collections.emptyList(), // TODO links
-                    0,
-                    new Status(null, StatusCode.STATUS_CODE_OK)
-            );
+            final Span blockSpan = Span.newBuilder()
+                    .traceId(blockTraceID) // 16 byte trace id
+                    .spanId(blockSpanID) // 8 byte span id
+                    .name("Block " + blockInfo.blockNum())
+                    .startTimeUnixNano(blockInfo.blockStartTimeNanos())
+                    .endTimeUnixNano(blockInfo.blockEndTimeNanos())
+                    .build();
             spans.add(blockSpan);
         } catch (Exception e) {
             System.err.printf("Error converting block %s: %s%n", blockInfo.blockNum(), e.getMessage());

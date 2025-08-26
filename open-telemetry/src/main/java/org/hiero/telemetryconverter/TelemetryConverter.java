@@ -1,6 +1,8 @@
 package org.hiero.telemetryconverter;
 
-import static org.hiero.telemetryconverter.Utils.OPEN_TELEMETRY_SCHEMA_URL;
+import static java.lang.System.Logger.Level.ERROR;
+import static java.lang.System.Logger.Level.INFO;
+import static java.lang.System.Logger.Level.WARNING;
 
 import com.hedera.pbj.grpc.client.helidon.PbjGrpcClient;
 import com.hedera.pbj.grpc.client.helidon.PbjGrpcClientConfig;
@@ -28,6 +30,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.logging.LogManager;
 import java.util.stream.Stream;
 import org.eclipse.collections.impl.map.mutable.primitive.IntObjectHashMap;
 import org.eclipse.collections.impl.map.mutable.primitive.LongObjectHashMap;
@@ -37,6 +40,8 @@ import org.hiero.telemetryconverter.model.trace.EventTraceInfo;
 import org.hiero.telemetryconverter.model.trace.RoundTraceInfo;
 import org.hiero.telemetryconverter.model.trace.TransactionTraceInfo;
 import org.hiero.telemetryconverter.spancreators.BlockSpanCreator;
+import org.hiero.telemetryconverter.util.CleanColorfulFormatter;
+import org.hiero.telemetryconverter.util.WarningException;
 
 /**
  * TelemetryConverter is a utility class for converting telemetry data.
@@ -51,6 +56,7 @@ import org.hiero.telemetryconverter.spancreators.BlockSpanCreator;
  */
 @SuppressWarnings("CallToPrintStackTrace")
 public final class TelemetryConverter {
+    private static final System.Logger LOGGER = System.getLogger(TelemetryConverter.class.getName());
 
     private record Options(Optional<String> authority, String contentType) implements ServiceInterface.RequestOptions {}
 
@@ -61,6 +67,10 @@ public final class TelemetryConverter {
     private static final Path PROJECT_ROOT = Paths.get("").toAbsolutePath();
     private static final Path JFR_TRACE_DIR = PROJECT_ROOT.resolve("hedera-node/hedera-app/build/node/data/");
     private static final Path BLOCK_FILES_DIR = PROJECT_ROOT.resolve("hedera-node/hedera-app/build/node/data/blockStreams/block-0.0.3");
+
+    private static final Resource HIERO_RESOURCE = Resource.newBuilder()
+            .attributes(new KeyValue("service.name", AnyValue.newBuilder().stringValue("hiero-consensus-node").build()))
+            .build();
 
     /** Cache of all block traces found in the JFR file, keyed by block number. */
     private static final LongObjectHashMap<List<BlockTraceInfo>> blockTraces = new LongObjectHashMap<>();
@@ -78,7 +88,18 @@ public final class TelemetryConverter {
 
 
     public static void main(String[] args) throws IOException {
-        System.out.println("TelemetryConverter.main "+Path.of("").toAbsolutePath().toString());
+        // load the logging configuration from the classpath and make it colorful
+        try (var loggingConfigIn = TelemetryConverter.class.getClassLoader().getResourceAsStream("logging.properties")) {
+            if (loggingConfigIn != null) {
+                LogManager.getLogManager().readConfiguration(loggingConfigIn);
+            } else {
+                LOGGER.log(INFO, "No logging configuration found");
+            }
+        } catch (IOException e) {
+            LOGGER.log(INFO, "Failed to load logging configuration", e);
+        }
+        CleanColorfulFormatter.makeLoggingColorful();
+        LOGGER.log(INFO, "Using default logging configuration");
         // clean or create testOutputDir. Delete contents if it exists, otherwise create new directory
         try {
             if (Files.exists(testOutputDir)) {
@@ -124,54 +145,46 @@ public final class TelemetryConverter {
                         try {
                             final BlockInfo blockInfo = new BlockInfo(blockFilePath,
                                     blockTraces, roundTraces, eventTraces, transactionTraces);
-                            System.out.println("Created BlockInfo: " + blockInfo);
+                            LOGGER.log(INFO, "Created: " + blockInfo);
                             return blockInfo;
+                        } catch (WarningException e) {
+                            LOGGER.log(WARNING, e.getMessage());
                         } catch (Exception e) {
-                            System.err.printf("Error creating BlockInfo for block %s, because -> %s%n",
-                                    blockFilePath.getFileName(), e.getMessage());
-                            return null;
+                            LOGGER.log(ERROR, "Error creating BlockInfo for block " + blockFilePath.getFileName(), e);
                         }
+                        return null;
                     })
                     .filter(Objects::nonNull)
                     .map(BlockSpanCreator::createBlockSpans)
-//                    .forEach(TelemetryConverter::sendSpans);
-                    .forEach(TelemetryConverter::printSpans);
+                    .limit(1) // TODO limit to first 1 blocks for testing
+                    .forEach(TelemetryConverter::sendSpans);
         }
     }
 
     private static final AtomicLong spanIdCounter = new AtomicLong(0L);
 
-    private static ResourceSpans createResourceSpans(final List<Span> spans) {
-        return new ResourceSpans(
-//                Resource.newBuilder().attributes(
-//                        KeyValue.newBuilder().key("cx.application.name").value(AnyValue.newBuilder().stringValue("hiero")).build(),
-//                        KeyValue.newBuilder().key("service.name").value(AnyValue.newBuilder().stringValue("consensus-node")).build()
-//                ).build(),
-                Resource.newBuilder()
-                        .attributes(new KeyValue("service.name", AnyValue.newBuilder().stringValue("Hedera").build()))
-                        .build(),
-                List.of(ScopeSpans.newBuilder()
-                        .spans(spans)
-                        .build()),
-                OPEN_TELEMETRY_SCHEMA_URL);
-    }
-
     private static void sendSpans(final List<Span> spans) {
-        System.out.println("TelemetryConverter.sendSpans "+spans.size());
-        traceClient.Export(ExportTraceServiceRequest.newBuilder()
-                .resourceSpans(createResourceSpans(spans))
-                .build());
-    }
-
-    private static void printSpans(final List<Span> spans) {
-//        System.out.println("TelemetryConverter.sendSpans "+spans.size());
-        ResourceSpans resourceSpans = createResourceSpans(spans);
-        // write json file
-        try(WritableStreamingData out = new WritableStreamingData(Files.newOutputStream(
-                testOutputDir.resolve("spans"+spanIdCounter.incrementAndGet()+".json")))) {
-            ResourceSpans.JSON.write(resourceSpans, out);
-        } catch (IOException e) {
-            System.err.printf("Error writing spans to file: %s%n", e.getMessage());
+        LOGGER.log(INFO, "Start sending "+spans.size()+" spans to OpenTelemetry collector");
+        try {
+            final ResourceSpans resourceSpans = ResourceSpans.newBuilder()
+                    .resource(HIERO_RESOURCE)
+                    .scopeSpans(ScopeSpans.newBuilder().spans(spans).build())
+                    .build();
+            final ExportTraceServiceRequest request = ExportTraceServiceRequest.newBuilder()
+                    .resourceSpans(resourceSpans)
+                    .build();
+            // write json file
+            try(WritableStreamingData out = new WritableStreamingData(Files.newOutputStream(
+                    testOutputDir.resolve("ExportTraceServiceRequests"+spanIdCounter.incrementAndGet()+".json")))) {
+                ExportTraceServiceRequest.JSON.write(request, out);
+            } catch (IOException e) {
+                System.err.printf("Error writing spans to file: %s%n", e.getMessage());
+            }
+            // send to GRPC
+            traceClient.Export(request);
+            LOGGER.log(INFO, "Sent "+spans.size()+" spans to OpenTelemetry collector");
+        } catch (Exception e) {
+            LOGGER.log(ERROR, "Error sending spans to OpenTelemetry collector: " + e.getMessage(), e);
         }
     }
 

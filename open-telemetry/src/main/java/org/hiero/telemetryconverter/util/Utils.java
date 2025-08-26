@@ -1,4 +1,4 @@
-package org.hiero.telemetryconverter;
+package org.hiero.telemetryconverter.util;
 
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import java.io.IOException;

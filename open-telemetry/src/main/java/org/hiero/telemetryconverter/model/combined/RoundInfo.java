@@ -11,6 +11,7 @@ import org.eclipse.collections.impl.map.mutable.primitive.LongObjectHashMap;
 import org.hiero.telemetryconverter.model.trace.EventTraceInfo;
 import org.hiero.telemetryconverter.model.trace.RoundTraceInfo;
 import org.hiero.telemetryconverter.model.trace.TransactionTraceInfo;
+import org.hiero.telemetryconverter.util.WarningException;
 
 /**
  * Correlated round information from JFR events and block stream. We collect and correlate all data into this class so
@@ -32,7 +33,11 @@ public class RoundInfo {
         final RoundHeader roundHeader = roundItems.getFirst().roundHeader();
         roundNumber = roundHeader.roundNumber();
         // find all round trace info
-        roundTraces.get(roundNumber).forEach(t -> {;
+        var traces = roundTraces.get(roundNumber);
+        if (traces == null) {
+            throw new WarningException("No round traces found in JFR files for round " + roundNumber);
+        }
+        traces.forEach(t -> {;
             switch (t.eventType()) {
                 case CREATED -> createdTraces.add(t);
                 case EXECUTED -> executedTraces.add(t);
@@ -60,7 +65,8 @@ public class RoundInfo {
                 .mapToLong(RoundTraceInfo::startTimeNanos)
                 .min().orElseThrow();
         // find the oldest block creation time
-        roundEndTimeNanos = hashedTraces.stream()
+        roundEndTimeNanos = roundTraces.values().stream()
+                .flatMap(List::stream)
                 .mapToLong(RoundTraceInfo::endTimeNanos)
                 .max().orElseThrow();
     }
