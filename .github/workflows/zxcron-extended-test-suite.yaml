@@ -165,6 +165,9 @@ jobs:
           else
             gh run cancel "${{ github.run_id }}"
           fi
+          
+          # Force a failure
+          exit 1
 
   extended-test-suite:
     name: Execute eXtended Test Suite
@@ -721,18 +724,18 @@ jobs:
           }
           EOF
 
-      - name: Report failure (slack citr-operations)
-        uses: slackapi/slack-github-action@b0fa283ad8fea605de13dc3f449259339835fc52 # v2.1.0
-        with:
-          webhook: ${{ secrets.SLACK_CITR_OPERATIONS_WEBHOOK }}
-          webhook-type: incoming-webhook
-          payload-templated: true
-          payload-file-path: slack_payload.json
-
-      - name: Report failure (slack release-team)
-        uses: slackapi/slack-github-action@b0fa283ad8fea605de13dc3f449259339835fc52 # v2.1.0
-        with:
-          webhook: ${{ secrets.SLACK_RELEASE_TEAM_WEBHOOK }}
-          webhook-type: incoming-webhook
-          payload-templated: true
-          payload-file-path: slack_payload.json
+#      - name: Report failure (slack citr-operations)
+#        uses: slackapi/slack-github-action@b0fa283ad8fea605de13dc3f449259339835fc52 # v2.1.0
+#        with:
+#          webhook: ${{ secrets.SLACK_CITR_OPERATIONS_WEBHOOK }}
+#          webhook-type: incoming-webhook
+#          payload-templated: true
+#          payload-file-path: slack_payload.json
+#
+#      - name: Report failure (slack release-team)
+#        uses: slackapi/slack-github-action@b0fa283ad8fea605de13dc3f449259339835fc52 # v2.1.0
+#        with:
+#          webhook: ${{ secrets.SLACK_RELEASE_TEAM_WEBHOOK }}
+#          webhook-type: incoming-webhook
+#          payload-templated: true
+#          payload-file-path: slack_payload.json
