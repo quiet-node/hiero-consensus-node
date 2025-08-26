@@ -125,11 +125,11 @@ jobs:
           details: |
             The tagging of commit `${{ inputs.ref }}` for the Extended Test Suite (XTS) promotion has failed.
             Please investigate the issue to ensure the commit is properly tagged for further testing and deployment processes.
-          notification_target_type: Service
-          notification_target: CI/CD Workflows
-          set_as_noise: true
-          alert_urgency: High
-          environments: CITR
+          notification_target_type: 'Service'
+          notification_target: 'CI/CD Workflows'
+          set_as_noise: 'true'
+          alert_urgency: 'High'
+          environments: 'CITR'
           external_id: ${{ github.run_id }}
           external_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 

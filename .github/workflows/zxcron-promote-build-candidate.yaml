@@ -269,7 +269,7 @@ jobs:
             }
 
   report-failure:
-    name: Report XTS execution failure
+    name: Report Build Promotion failure
     runs-on: hiero-citr-linux-medium
     needs:
       - determine-build-candidate
@@ -285,10 +285,14 @@ jobs:
         uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.13.0
         with:
           egress-policy: audit
+
       - name: Build Rootly Summary
         id: rootly-summary
         run: |
-          summary="The Promote Build Candidate job failed (${{ needs.promote-build-candidate.outputs.build-candidate-tag }})."
+          summary="The Promote Build Candidate job failed"
+          if [[ -z "${{ needs.promote-build-candidate.outputs.build-candidate-tag }}" ]]; then
+            summary="The Promote Build Candidate job failed (${{ needs.promote-build-candidate.outputs.build-candidate-tag }})."
+          fi
           echo "summary=${summary}" >> "${GITHUB_OUTPUT}"
           {
             echo 'details<<EOF'
@@ -317,7 +321,7 @@ jobs:
           api_key: ${{ secrets.ROOTLY_API_KEY }}
           summary: ${{ steps.rootly-summary.outputs.summary }}
           details: ${{ steps.rootly-summary.outputs.details }}
-          notification_target_type: 'Service'
+          notification_target_type: "Service"
           notification_target: 'CI/CD Workflows'
           set_as_noise: 'true'
           alert_urgency: 'High'
