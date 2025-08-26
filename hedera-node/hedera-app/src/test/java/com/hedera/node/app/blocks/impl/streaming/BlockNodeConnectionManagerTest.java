@@ -749,7 +749,7 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         verify(newConnection).getNodeConfig();
         verify(newConnection).createRequestPipeline();
         verify(newConnection).updateConnectionState(ConnectionState.ACTIVE);
-        verify(bufferService).getLowestUnackedBlockNumber();
+        verify(bufferService, times(2)).getLowestUnackedBlockNumber();
 
         verifyNoMoreInteractions(activeConnection);
         verifyNoMoreInteractions(newConnection);
@@ -828,7 +828,7 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
 
         verify(newConnection).createRequestPipeline();
         verify(newConnection).updateConnectionState(ConnectionState.ACTIVE);
-        verify(bufferService).getLowestUnackedBlockNumber();
+        verify(bufferService, times(2)).getLowestUnackedBlockNumber();
 
         verifyNoMoreInteractions(newConnection);
         verifyNoInteractions(executorService);
