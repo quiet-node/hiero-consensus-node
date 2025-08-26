@@ -8,7 +8,9 @@ import com.hedera.hapi.node.state.roster.Roster;
 import com.hedera.hapi.platform.state.NodeId;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
+import java.time.Duration;
 import org.hiero.consensus.model.status.PlatformStatus;
+import org.hiero.otter.fixtures.AsyncNodeActions;
 import org.hiero.otter.fixtures.Node;
 
 /**
@@ -135,6 +137,46 @@ public abstract class AbstractNode implements Node {
             newBuildNumber = 1;
         }
         this.version = this.version.copyBuilder().build("" + newBuildNumber).build();
+    }
+
+    /**
+     * Gets the default async actions for this node.
+     *
+     * @return the default async actions
+     */
+    @NonNull
+    protected abstract AsyncNodeActions defaultAsyncActions();
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void start() {
+        defaultAsyncActions().start();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void killImmediately() {
+        defaultAsyncActions().killImmediately();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void startSyntheticBottleneck(@NonNull final Duration delayPerRound) {
+        defaultAsyncActions().startSyntheticBottleneck(delayPerRound);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void stopSyntheticBottleneck() {
+        defaultAsyncActions().stopSyntheticBottleneck();
     }
 
     /**

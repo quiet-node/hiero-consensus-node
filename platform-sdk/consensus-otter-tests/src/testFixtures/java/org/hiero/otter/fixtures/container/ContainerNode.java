@@ -15,7 +15,6 @@ import static org.junit.jupiter.api.Assertions.fail;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.ProtocolStringList;
 import com.hedera.hapi.node.state.roster.Roster;
-import com.hedera.hapi.node.state.roster.RosterEntry;
 import com.hedera.hapi.platform.state.NodeId;
 import com.swirlds.config.api.Configuration;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -99,7 +98,7 @@ public class ContainerNode extends AbstractNode implements Node, TimeTickReceive
     private NodeCommunicationServiceGrpc.NodeCommunicationServiceBlockingStub nodeCommBlockingStub;
 
     /** An instance of asynchronous actions this node can perform with the default time. */
-    private final AsyncNodeActions defaultAsyncAction = withTimeout(DEFAULT_TIMEOUT);
+    private final AsyncNodeActions defaultAsyncActions = withTimeout(DEFAULT_TIMEOUT);
 
     /** The configuration of this node */
     private final ContainerNodeConfiguration nodeConfiguration;
@@ -127,7 +126,7 @@ public class ContainerNode extends AbstractNode implements Node, TimeTickReceive
             @NonNull final Network network,
             @NonNull final ImageFromDockerfile dockerImage,
             @NonNull final Path outputDirectory) {
-        super(selfId, getWeight(roster, selfId));
+        super(selfId, roster);
 
         this.roster = requireNonNull(roster, "roster must not be null");
         this.keysAndCerts = requireNonNull(keysAndCerts, "keysAndCerts must not be null");
@@ -154,50 +153,12 @@ public class ContainerNode extends AbstractNode implements Node, TimeTickReceive
     }
 
     /**
-     * Utility method that calculated the weight of the node based in the specified roster.
-     *
-     * @param roster the roster to use for the lookup
-     * @param nodeId the id of the node whose weight to lookup
-     * @return the node's weight
-     */
-    private static long getWeight(@NonNull final Roster roster, @NonNull final NodeId nodeId) {
-        return roster.rosterEntries().stream()
-                .filter(entry -> entry.nodeId() == nodeId.id())
-                .findFirst()
-                .map(RosterEntry::weight)
-                .orElseThrow(() -> new IllegalArgumentException("Node ID not found in roster"));
-    }
-
-    /**
      * {@inheritDoc}
      */
     @Override
-    public void killImmediately() {
-        defaultAsyncAction.killImmediately();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void startSyntheticBottleneck(@NonNull final Duration delayPerRound) {
-        defaultAsyncAction.startSyntheticBottleneck(delayPerRound);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void stopSyntheticBottleneck() {
-        defaultAsyncAction.stopSyntheticBottleneck();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void start() {
-        defaultAsyncAction.start();
+    @NonNull
+    protected AsyncNodeActions defaultAsyncActions() {
+        return defaultAsyncActions;
     }
 
     /**
@@ -386,6 +347,19 @@ public class ContainerNode extends AbstractNode implements Node, TimeTickReceive
         }
     }
 
+    private void handlePlatformChange(@NonNull final EventMessage value) {
+        final PlatformStatusChange change = value.getPlatformStatusChange();
+        final String statusName = change.getNewStatus();
+        log.info("Received platform status change from {}: {}", selfId, statusName);
+        try {
+            final PlatformStatus newStatus = PlatformStatus.valueOf(statusName);
+            platformStatus = newStatus;
+            resultsCollector.addPlatformStatus(newStatus);
+        } catch (final IllegalArgumentException e) {
+            log.warn("Received unknown platform status: {}", statusName);
+        }
+    }
+
     /**
      * Container-specific implementation of {@link AsyncNodeActions}.
      */
@@ -515,19 +489,6 @@ public class ContainerNode extends AbstractNode implements Node, TimeTickReceive
                     .syntheticBottleneckUpdate(SyntheticBottleneckRequest.newBuilder()
                             .setSleepMillisPerRound(0)
                             .build());
-        }
-    }
-
-    private void handlePlatformChange(@NonNull final EventMessage value) {
-        final PlatformStatusChange change = value.getPlatformStatusChange();
-        final String statusName = change.getNewStatus();
-        log.info("Received platform status change from {}: {}", selfId, statusName);
-        try {
-            final PlatformStatus newStatus = PlatformStatus.valueOf(statusName);
-            platformStatus = newStatus;
-            resultsCollector.addPlatformStatus(newStatus);
-        } catch (final IllegalArgumentException e) {
-            log.warn("Received unknown platform status: {}", statusName);
         }
     }
 }
